@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "412638323904",
+    "project_id": "productoraempacadora",
+    "storage_bucket": "productoraempacadora.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:412638323904:android:1ec181cee7274352f37925",
+        "android_client_info": {
+          "package_name": "com.example.productoraempacadora"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBdl1fS-r_Tbxb-XObLHPA-Qmx5ZFddZTs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
