@@ -1,18 +1,15 @@
 import '../../../../core/errors/result.dart';
 import '../entities/lote.dart';
+import '../../../administracion/domain/entities/finca.dart';
 import '../entities/ciclo_produccion.dart';
-import '../entities/produccion_enums.dart';
+import '../entities/productora_stats.dart';
 
 /// Contrato del repositorio de producción.
 abstract class ProduccionRepository {
   // --- Lotes ---
+  // --- Lotes & Fincas ---
   Stream<List<Lote>> watchLotes(String productoraId);
-  Future<Result<Lote>> crearLote({
-    required String nombre,
-    required double area,
-    required String variedad,
-    required String productoraId,
-  });
+  Stream<List<Finca>> watchFincas(String productoraId);
 
   // --- Ciclos ---
   Stream<List<CicloProduccion>> watchCiclos(String productoraId);
@@ -22,7 +19,7 @@ abstract class ProduccionRepository {
   );
 
   // --- Eventos del Ciclo ---
-  Future<Result<CicloProduccion>> registrarApertura({
+  Future<Result<CicloProduccion>> registrarSiembra({
     required String idLote,
     required String nombreLote,
     required double area,
@@ -33,7 +30,9 @@ abstract class ProduccionRepository {
 
   Future<Result<CicloProduccion>> registrarEncintado({
     required String idCiclo,
-    required ColorCinta colorCinta,
+    required String cintaId,
+    required String cintaNombre,
+    required String cintaColorHex,
     required double cantidad,
     required String productoraId,
     required String uidUsuario,
@@ -45,4 +44,7 @@ abstract class ProduccionRepository {
     required String productoraId,
     required String uidUsuario,
   });
+
+  // --- Estadísticas (Vista Previa) ---
+  Future<Result<ProductoraStats>> getStatsProductora(String productoraId);
 }

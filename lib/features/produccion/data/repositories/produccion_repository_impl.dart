@@ -2,8 +2,9 @@ import '../../../../core/errors/failures.dart';
 import '../../../../core/errors/result.dart';
 import '../../domain/entities/lote.dart';
 import '../../domain/entities/ciclo_produccion.dart';
-import '../../domain/entities/produccion_enums.dart';
+import '../../domain/entities/productora_stats.dart';
 import '../../domain/repositories/produccion_repository.dart';
+import '../../../administracion/domain/entities/finca.dart';
 import '../datasources/produccion_remote_datasource.dart';
 
 class ProduccionRepositoryImpl implements ProduccionRepository {
@@ -21,25 +22,8 @@ class ProduccionRepositoryImpl implements ProduccionRepository {
   }
 
   @override
-  Future<Result<Lote>> crearLote({
-    required String nombre,
-    required double area,
-    required String variedad,
-    required String productoraId,
-  }) async {
-    try {
-      final lote = await _datasource.crearLote(
-        nombre: nombre,
-        area: area,
-        variedad: variedad,
-        productoraId: productoraId,
-      );
-      return Success(lote);
-    } on Failure catch (f) {
-      return FailureResult(f);
-    } catch (e) {
-      return FailureResult(ServerFailure('Error al crear lote: $e'));
-    }
+  Stream<List<Finca>> watchFincas(String productoraId) {
+    return _datasource.watchFincas(productoraId);
   }
 
   // ═══════════════════════════════════════════════════════
@@ -74,7 +58,7 @@ class ProduccionRepositoryImpl implements ProduccionRepository {
   // ═══════════════════════════════════════════════════════
 
   @override
-  Future<Result<CicloProduccion>> registrarApertura({
+  Future<Result<CicloProduccion>> registrarSiembra({
     required String idLote,
     required String nombreLote,
     required double area,
@@ -83,7 +67,7 @@ class ProduccionRepositoryImpl implements ProduccionRepository {
     required String uidUsuario,
   }) async {
     try {
-      final ciclo = await _datasource.registrarApertura(
+      final ciclo = await _datasource.registrarSiembra(
         idLote: idLote,
         nombreLote: nombreLote,
         area: area,
@@ -95,14 +79,16 @@ class ProduccionRepositoryImpl implements ProduccionRepository {
     } on Failure catch (f) {
       return FailureResult(f);
     } catch (e) {
-      return FailureResult(ServerFailure('Error al registrar apertura: $e'));
+      return FailureResult(ServerFailure('Error al registrar siembra: $e'));
     }
   }
 
   @override
   Future<Result<CicloProduccion>> registrarEncintado({
     required String idCiclo,
-    required ColorCinta colorCinta,
+    required String cintaId,
+    required String cintaNombre,
+    required String cintaColorHex,
     required double cantidad,
     required String productoraId,
     required String uidUsuario,
@@ -110,7 +96,9 @@ class ProduccionRepositoryImpl implements ProduccionRepository {
     try {
       final ciclo = await _datasource.registrarEncintado(
         idCiclo: idCiclo,
-        colorCinta: colorCinta,
+        cintaId: cintaId,
+        cintaNombre: cintaNombre,
+        cintaColorHex: cintaColorHex,
         cantidad: cantidad,
         productoraId: productoraId,
         uidUsuario: uidUsuario,
@@ -142,6 +130,27 @@ class ProduccionRepositoryImpl implements ProduccionRepository {
       return FailureResult(f);
     } catch (e) {
       return FailureResult(ServerFailure('Error al registrar cosecha: $e'));
+    }
+  }
+
+  @override
+  Future<Result<ProductoraStats>> getStatsProductora(
+    String productoraId,
+  ) async {
+    try {
+      final statsMap = await _datasource.getStatsProductora(productoraId);
+      return Success(
+        ProductoraStats(
+          ciclosActivos: statsMap['ciclosActivos'] as int,
+          lotesActivos: statsMap['lotesActivos'] as int,
+          volumenCosecha: statsMap['volumenCosecha'] as double,
+          volumenEncintado: statsMap['volumenEncintado'] as double,
+        ),
+      );
+    } catch (e) {
+      // Si falla, retornamos stats vacíos para no romper la UI, o error.
+      // Preferible error para reintentar.
+      return FailureResult(ServerFailure('Error al cargar estadísticas: $e'));
     }
   }
 }

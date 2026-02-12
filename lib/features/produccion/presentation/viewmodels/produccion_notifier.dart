@@ -50,15 +50,16 @@ class ProduccionState {
     final cicloActivo = ciclos.where(
       (c) =>
           c.idLote == idLote &&
-          (c.estado == EstadoCiclo.abierto ||
+          (c.estado == EstadoCiclo.sembrado ||
               c.estado == EstadoCiclo.encintado),
     );
 
-    if (cicloActivo.isEmpty) return TipoEvento.apertura;
+    if (cicloActivo.isEmpty) return TipoEvento.siembra;
 
     final ciclo = cicloActivo.first;
-    if (ciclo.estado == EstadoCiclo.abierto) return TipoEvento.encintado;
-    if (ciclo.estado == EstadoCiclo.encintado) return TipoEvento.cosecha;
+    if (ciclo.estado == EstadoCiclo.sembrado) return TipoEvento.encintado;
+    if (ciclo.estado == EstadoCiclo.encintado)
+      return TipoEvento.encintado; // Permitir múltiples encintados
     return null;
   }
 }
@@ -73,6 +74,10 @@ class ProduccionNotifier extends StateNotifier<ProduccionState> {
     : super(const ProduccionState(isLoading: true)) {
     _watchCiclos();
   }
+
+  // ═══════════════════════════════════════════════════════
+  //  STREAMS
+  // ═══════════════════════════════════════════════════════
 
   // ═══════════════════════════════════════════════════════
   //  STREAMS
@@ -104,10 +109,10 @@ class ProduccionNotifier extends StateNotifier<ProduccionState> {
   }
 
   // ═══════════════════════════════════════════════════════
-  //  APERTURA
+  //  SIEMBRA (Antes Apertura)
   // ═══════════════════════════════════════════════════════
 
-  Future<bool> registrarApertura({
+  Future<bool> registrarSiembra({
     required String idLote,
     required String nombreLote,
     required double area,
@@ -128,7 +133,7 @@ class ProduccionNotifier extends StateNotifier<ProduccionState> {
       return false;
     }
 
-    final result = await _repository.registrarApertura(
+    final result = await _repository.registrarSiembra(
       idLote: idLote,
       nombreLote: nombreLote,
       area: area,
@@ -142,7 +147,7 @@ class ProduccionNotifier extends StateNotifier<ProduccionState> {
         state = state.copyWith(
           isLoading: false,
           cicloSeleccionado: ciclo,
-          successMessage: 'Apertura registrada exitosamente',
+          successMessage: 'Siembra registrada exitosamente',
         );
         return true;
       case FailureResult(failure: final f):
@@ -152,12 +157,14 @@ class ProduccionNotifier extends StateNotifier<ProduccionState> {
   }
 
   // ═══════════════════════════════════════════════════════
-  //  ENCINTADO
+  //  ENCINTADO (Múltiple)
   // ═══════════════════════════════════════════════════════
 
   Future<bool> registrarEncintado({
     required String idCiclo,
-    required ColorCinta colorCinta,
+    required String cintaId,
+    required String cintaNombre,
+    required String cintaColorHex,
     required double cantidad,
     required String uidUsuario,
   }) async {
@@ -177,7 +184,9 @@ class ProduccionNotifier extends StateNotifier<ProduccionState> {
 
     final result = await _repository.registrarEncintado(
       idCiclo: idCiclo,
-      colorCinta: colorCinta,
+      cintaId: cintaId,
+      cintaNombre: cintaNombre,
+      cintaColorHex: cintaColorHex,
       cantidad: cantidad,
       productoraId: productoraId,
       uidUsuario: uidUsuario,

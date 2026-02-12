@@ -3,7 +3,9 @@ import '../../../../core/constants/firestore_paths.dart';
 import '../../../../core/errors/failures.dart';
 import '../models/lote_model.dart';
 import '../models/ciclo_produccion_model.dart';
+import '../../../administracion/data/models/finca_model.dart';
 import '../../domain/entities/produccion_enums.dart';
+import '../../domain/entities/detalle_encintado.dart';
 
 /// Datasource remoto para operaciones de producción contra Firestore.
 class ProduccionRemoteDatasource {
@@ -27,7 +29,7 @@ class ProduccionRemoteDatasource {
 
   Stream<List<LoteModel>> watchLotes(String productoraId) {
     return _lotesRef()
-        .where('id_productora', isEqualTo: productoraId)
+        .where('productoraId', isEqualTo: productoraId)
         .orderBy('nombre')
         .snapshots()
         .map(
@@ -36,37 +38,26 @@ class ProduccionRemoteDatasource {
         );
   }
 
-  Future<LoteModel> crearLote({
-    required String nombre,
-    required double area,
-    required String variedad,
-    required String productoraId,
-  }) async {
-    // Verificar nombre único dentro de la productora
-    final existing = await _lotesRef()
-        .where('id_productora', isEqualTo: productoraId)
-        .where('nombre', isEqualTo: nombre)
-        .limit(1)
-        .get();
+  // ═══════════════════════════════════════════════════════
+  //  FINCAS (Read-Only for Production)
+  // ═══════════════════════════════════════════════════════
 
-    if (existing.docs.isNotEmpty) {
-      throw const ValidationFailure('Ya existe un lote con ese nombre');
-    }
-
-    final docRef = _lotesRef().doc();
-
-    final lote = LoteModel(
-      id: docRef.id,
-      nombre: nombre,
-      area: area,
-      variedad: variedad,
-      estado: EstadoLote.libre,
-      idProductora: productoraId,
-    );
-
-    await docRef.set(lote.toJsonCreate());
-    return lote;
+  Stream<List<FincaModel>> watchFincas(String productoraId) {
+    return _firestore
+        .collection(FirestorePaths.fincas)
+        .where('productoraId', isEqualTo: productoraId)
+        .where('activo', isEqualTo: true) // Solo fincas activas
+        .orderBy('nombre')
+        .snapshots()
+        .map(
+          (snap) =>
+              snap.docs.map((doc) => FincaModel.fromFirestore(doc)).toList(),
+        );
   }
+
+  // ═══════════════════════════════════════════════════════
+  //  CICLOS DE PRODUCCIÓN
+  // ═══════════════════════════════════════════════════════
 
   // ═══════════════════════════════════════════════════════
   //  CICLOS DE PRODUCCIÓN
@@ -91,7 +82,10 @@ class ProduccionRemoteDatasource {
     final snap = await _ciclosRef()
         .where('id_productora', isEqualTo: productoraId)
         .where('id_lote', isEqualTo: idLote)
-        .where('estado', whereIn: ['abierto', 'encintado'])
+        .where(
+          'estado',
+          whereIn: ['sembrado', 'encintado', 'abierto'],
+        ) // Compatible con legacy
         .limit(1)
         .get();
 
@@ -100,10 +94,10 @@ class ProduccionRemoteDatasource {
   }
 
   // ═══════════════════════════════════════════════════════
-  //  APERTURA
+  //  SIEMBRA (Antes Apertura)
   // ═══════════════════════════════════════════════════════
 
-  Future<CicloProduccionModel> registrarApertura({
+  Future<CicloProduccionModel> registrarSiembra({
     required String idLote,
     required String nombreLote,
     required double area,
@@ -127,10 +121,11 @@ class ProduccionRemoteDatasource {
       idLote: idLote,
       nombreLote: nombreLote,
       idProductora: productoraId,
-      estado: EstadoCiclo.abierto,
-      fechaApertura: now,
+      estado: EstadoCiclo.sembrado,
+      fechaSiembra: now,
       area: area,
       variedad: variedad,
+      encintados: const [],
       uidRegistradoPor: uidUsuario,
     );
 
@@ -150,12 +145,14 @@ class ProduccionRemoteDatasource {
   }
 
   // ═══════════════════════════════════════════════════════
-  //  ENCINTADO
+  //  ENCINTADO (Múltiple)
   // ═══════════════════════════════════════════════════════
 
   Future<CicloProduccionModel> registrarEncintado({
     required String idCiclo,
-    required ColorCinta colorCinta,
+    required String cintaId,
+    required String cintaNombre,
+    required String cintaColorHex,
     required double cantidad,
     required String productoraId,
     required String uidUsuario,
@@ -167,47 +164,59 @@ class ProduccionRemoteDatasource {
 
     final ciclo = CicloProduccionModel.fromFirestore(cicloDoc);
 
-    if (ciclo.estado != EstadoCiclo.abierto) {
+    // Permitir encintar si está sembrado o ya encintado
+    if (ciclo.estado != EstadoCiclo.sembrado &&
+        ciclo.estado != EstadoCiclo.encintado) {
       throw const ValidationFailure(
-        'Solo se puede encintar un ciclo en estado "Abierto"',
+        'Solo se puede encintar un ciclo activo (Sembrado o Encintado)',
       );
     }
 
     final now = DateTime.now();
+    final nuevoEncintado = {
+      'id': _firestore.collection('tmp').doc().id, // ID único generado
+      'cinta_id': cintaId,
+      'cinta_nombre': cintaNombre,
+      'cinta_color_hex': cintaColorHex,
+      'cantidad': cantidad,
+      'fecha': now.millisecondsSinceEpoch,
+      'usuario_id': uidUsuario,
+    };
 
     final batch = _firestore.batch();
 
-    // Actualizar ciclo
+    // Agregar nuevo encintado a la lista y actualizar estado
     batch.update(_ciclosRef().doc(idCiclo), {
-      'estado': EstadoCiclo.encintado.name,
-      'color_cinta': colorCinta.name,
-      'cantidad_encintado': cantidad,
-      'fecha_encintado': Timestamp.fromDate(now),
+      'estado': EstadoCiclo.encintado.name, // Asegurar estado encintado
+      'encintados': FieldValue.arrayUnion([nuevoEncintado]),
       'fecha_actualizacion': FieldValue.serverTimestamp(),
     });
 
-    // Actualizar lote con color de cinta
+    // Actualizar lote con color de cinta (el último nombre de cinta encintado)
     final loteRef = _lotesRef().doc(ciclo.idLote);
     batch.update(loteRef, {
-      'color_cinta': colorCinta.name,
+      'color_cinta':
+          cintaNombre, // Guardamos el nombre para referencia visual rápida
       'fecha_actualizacion': FieldValue.serverTimestamp(),
     });
 
     await batch.commit();
 
+    // Retornamos el modelo actualizado (simulado para UI inmediata)
     return CicloProduccionModel(
-      id: idCiclo,
+      id: ciclo.id,
       idLote: ciclo.idLote,
       nombreLote: ciclo.nombreLote,
-      idProductora: productoraId,
+      idProductora: ciclo.idProductora,
       estado: EstadoCiclo.encintado,
-      fechaApertura: ciclo.fechaApertura,
+      fechaSiembra: ciclo.fechaSiembra,
       area: ciclo.area,
       variedad: ciclo.variedad,
-      colorCinta: colorCinta,
-      cantidadEncintado: cantidad,
-      uidRegistradoPor: uidUsuario,
-      fechaEncintado: now,
+      encintados: [
+        ...ciclo.encintados,
+        DetalleEncintado.fromMap(nuevoEncintado),
+      ],
+      uidRegistradoPor: ciclo.uidRegistradoPor,
     );
   }
 
@@ -234,13 +243,39 @@ class ProduccionRemoteDatasource {
       );
     }
 
+    // ── VALIDACIÓN: Verificar si tiene Empacadora Asignada ──
+    final asignacionSnap = await _firestore
+        .collection(FirestorePaths.asignaciones)
+        .where('id_productora', isEqualTo: productoraId)
+        .where('estado', isEqualTo: 'activa')
+        .limit(1)
+        .get();
+
+    if (asignacionSnap.docs.isEmpty) {
+      throw const ValidationFailure(
+        'No tiene una empacadora asignada actualmente. Contacte al administrador para poder entregar su cosecha.',
+      );
+    }
+
+    final idEmpacadora =
+        asignacionSnap.docs.first.get('id_empacadora') as String;
+
     final now = DateTime.now();
 
     final batch = _firestore.batch();
 
+    final cantidadEncintadoTotal = ciclo.totalEncintado;
+    final merma = cantidadEncintadoTotal - cantidad;
+    final mermaPorcentaje = cantidadEncintadoTotal > 0
+        ? (merma / cantidadEncintadoTotal) * 100
+        : 0.0;
+
     batch.update(_ciclosRef().doc(idCiclo), {
       'estado': EstadoCiclo.cosechado.name,
       'cantidad_cosecha': cantidad,
+      'merma': merma,
+      'merma_porcentaje': mermaPorcentaje,
+      'id_empacadora': idEmpacadora,
       'fecha_cosecha': Timestamp.fromDate(now),
       'fecha_actualizacion': FieldValue.serverTimestamp(),
     });
@@ -261,15 +296,67 @@ class ProduccionRemoteDatasource {
       nombreLote: ciclo.nombreLote,
       idProductora: productoraId,
       estado: EstadoCiclo.cosechado,
-      fechaApertura: ciclo.fechaApertura,
+      fechaSiembra: ciclo.fechaSiembra,
       area: ciclo.area,
       variedad: ciclo.variedad,
-      colorCinta: ciclo.colorCinta,
-      cantidadEncintado: ciclo.cantidadEncintado,
+      encintados: ciclo.encintados,
       cantidadCosecha: cantidad,
+      merma: merma,
+      mermaPorcentaje: mermaPorcentaje,
+      idEmpacadora: idEmpacadora,
       uidRegistradoPor: uidUsuario,
-      fechaEncintado: ciclo.fechaEncintado,
       fechaCosecha: now,
     );
+  }
+
+  // ═══════════════════════════════════════════════════════
+  //  ESTADÍSTICAS (VISTA PREVIA)
+  // ═══════════════════════════════════════════════════════
+
+  Future<Map<String, dynamic>> getStatsProductora(String productoraId) async {
+    // Obtenemos todos los ciclos NO cancelados de la productora
+    // Idealmente usaríamos aggregation queries de Firestore, pero para el MVP
+    // leemos y procesamos en cliente (o usamos count() si solo fuera conteo).
+    // Dado que necesitamos sumar volúmenes, leemos los docs.
+    // Si la colección crece mucho, mover esto a Cloud Function o Aggregation.
+
+    final snap = await _ciclosRef()
+        .where('id_productora', isEqualTo: productoraId)
+        .where('estado', isNotEqualTo: EstadoCiclo.cancelado.name)
+        .get();
+
+    int ciclosActivos = 0;
+    int lotesActivos = 0;
+    double volumenCosecha = 0;
+    double volumenEncintado = 0;
+    final Set<String> lotesIds = {};
+
+    for (final doc in snap.docs) {
+      final ciclo = CicloProduccionModel.fromFirestore(doc);
+
+      // Contar ciclos activos (no cosechados y no cancelados)
+      if (ciclo.estado != EstadoCiclo.cosechado) {
+        ciclosActivos++;
+        lotesIds.add(ciclo.idLote);
+      }
+
+      // Volumen Cosecha (Histórico Total): Todo lo que ya se cortó.
+      volumenCosecha += ciclo.cantidadCosecha ?? 0;
+
+      // Volumen En Cinta (Inventario Activo): Solo lo que está ACTUALMENTE madurando en el campo.
+      // Si el ciclo ya se cosechó, esa cinta ya no cuenta como "pendiente".
+      if (ciclo.estado == EstadoCiclo.encintado) {
+        volumenEncintado += ciclo.totalEncintado;
+      }
+    }
+
+    lotesActivos = lotesIds.length;
+
+    return {
+      'ciclosActivos': ciclosActivos,
+      'lotesActivos': lotesActivos,
+      'volumenCosecha': volumenCosecha,
+      'volumenEncintado': volumenEncintado,
+    };
   }
 }

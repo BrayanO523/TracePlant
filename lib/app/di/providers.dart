@@ -28,6 +28,11 @@ import 'package:productoraempacadora/features/empacadora/data/repositories/empac
 import 'package:productoraempacadora/features/empacadora/domain/repositories/empacadora_repository.dart';
 import 'package:productoraempacadora/features/empacadora/presentation/viewmodels/empacadora_dashboard_notifier.dart';
 
+import 'package:productoraempacadora/features/administracion/data/repositories/administracion_repository_impl.dart';
+import 'package:productoraempacadora/features/administracion/domain/repositories/i_administracion_repository.dart';
+import 'package:productoraempacadora/features/administracion/domain/entities/variedad.dart';
+import 'package:productoraempacadora/features/administracion/domain/entities/cinta.dart';
+
 // ═══════════════════════════════════════════════════════
 //  CORE & EXTERNAL
 // ═══════════════════════════════════════════════════════
@@ -72,13 +77,8 @@ final currentUserStreamProvider = StreamProvider<AppUser?>((ref) {
   return authState.when(
     data: (user) {
       if (user == null) {
-        print('### DEBUG: Auth user is NULL (Not logged in)');
         return Stream.value(null);
       }
-
-      print(
-        '### DEBUG: Auth user FOUND: ${user.uid} (${user.email}). Fetching doc...',
-      );
 
       // Escuchar cambios en el documento del usuario en Firestore
       return ref
@@ -87,31 +87,21 @@ final currentUserStreamProvider = StreamProvider<AppUser?>((ref) {
           .doc(user.uid)
           .snapshots()
           .map((doc) {
-            print(
-              '### DEBUG: Firestore doc snapshot. Exists: ${doc.exists}. Path: ${FirestorePaths.usuarios}/${user.uid}',
-            );
             if (!doc.exists) {
-              print('### DEBUG: CRITICAL - Document does not exist!');
               return null;
             }
             try {
-              print('### DEBUG: Parsing data: ${doc.data()}');
               final entity = UserModel.fromDocument(doc).toEntity();
-              print('### DEBUG: SUCCESS Parsed role: ${entity.role}');
               return entity;
-            } catch (e, s) {
-              print('### DEBUG: CRITICAL - Parse Error: $e');
-              print('### DEBUG: Stack: $s');
+            } catch (e) {
               return null;
             }
           });
     },
     loading: () {
-      print('### DEBUG: Auth state loading...');
       return const Stream.empty();
     },
     error: (e, s) {
-      // print('DEBUG: Auth state error: $e');
       return const Stream.empty();
     },
   );
@@ -148,6 +138,29 @@ final produccionNotifierProvider = StateNotifierProvider.autoDispose
         productoraId,
       );
     });
+
+// ═══════════════════════════════════════════════════════
+//  ADMINISTRACION FEATURE
+// ═══════════════════════════════════════════════════════
+
+final administracionRepositoryProvider = Provider<IAdministracionRepository>((
+  ref,
+) {
+  return AdministracionRepositoryImpl(
+    firestore: ref.read(firestoreProvider),
+    auth: ref.read(firebaseAuthProvider),
+  );
+});
+
+final variedadesStreamProvider = StreamProvider.autoDispose<List<Variedad>>((
+  ref,
+) {
+  return ref.watch(administracionRepositoryProvider).watchVariedades();
+});
+
+final cintasStreamProvider = StreamProvider.autoDispose<List<Cinta>>((ref) {
+  return ref.watch(administracionRepositoryProvider).watchCintas();
+});
 
 // ═══════════════════════════════════════════════════════
 //  ASIGNACIONES (Admin)
