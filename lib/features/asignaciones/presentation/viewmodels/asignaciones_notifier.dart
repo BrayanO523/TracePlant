@@ -4,6 +4,7 @@ import 'package:equatable/equatable.dart';
 import '../../../../core/errors/result.dart';
 import '../../../productora/domain/entities/productora.dart';
 import '../../../empacadora/domain/entities/empacadora.dart';
+import '../../../produccion/domain/entities/lote.dart';
 import '../../domain/entities/asignacion.dart';
 import '../../domain/repositories/asignaciones_repository.dart';
 
@@ -16,6 +17,7 @@ class AsignacionesState extends Equatable {
   final List<Productora> productorasDisponibles;
   final List<Empacadora> empacadoras;
   final Map<String, int> cargaTrabajo;
+  final Map<String, List<Lote>> lotesPorProductora;
   final bool isLoading;
   final String? error;
   final String? successMessage;
@@ -25,6 +27,7 @@ class AsignacionesState extends Equatable {
     this.productorasDisponibles = const [],
     this.empacadoras = const [],
     this.cargaTrabajo = const {},
+    this.lotesPorProductora = const {},
     this.isLoading = false,
     this.error,
     this.successMessage,
@@ -35,6 +38,7 @@ class AsignacionesState extends Equatable {
     List<Productora>? productorasDisponibles,
     List<Empacadora>? empacadoras,
     Map<String, int>? cargaTrabajo,
+    Map<String, List<Lote>>? lotesPorProductora,
     bool? isLoading,
     String? error,
     String? successMessage,
@@ -45,6 +49,7 @@ class AsignacionesState extends Equatable {
           productorasDisponibles ?? this.productorasDisponibles,
       empacadoras: empacadoras ?? this.empacadoras,
       cargaTrabajo: cargaTrabajo ?? this.cargaTrabajo,
+      lotesPorProductora: lotesPorProductora ?? this.lotesPorProductora,
       isLoading: isLoading ?? this.isLoading,
       error: error,
       successMessage: successMessage,
@@ -71,6 +76,7 @@ class AsignacionesState extends Equatable {
     productorasDisponibles,
     empacadoras,
     cargaTrabajo,
+    lotesPorProductora,
     isLoading,
     error,
     successMessage,
@@ -117,10 +123,23 @@ class AsignacionesNotifier extends StateNotifier<AsignacionesState> {
         _repository.getCargaTrabajo(),
       ]);
 
+      final productoras = results[1] as List<Productora>;
+
+      // Cargar lotes de estas productoras
+      // Esto podría hacerse en paralelo con lo anterior si tuvieramos los IDs antes,
+      // pero requerimos la lista primeros.
+      Map<String, List<Lote>> lotes = {};
+      if (productoras.isNotEmpty) {
+        lotes = await _repository.getLotesDeProductoras(
+          productoras.map((p) => p.id).toList(),
+        );
+      }
+
       state = state.copyWith(
         empacadoras: results[0] as List<Empacadora>,
-        productorasDisponibles: results[1] as List<Productora>,
+        productorasDisponibles: productoras,
         cargaTrabajo: results[2] as Map<String, int>,
+        lotesPorProductora: lotes,
       );
     } catch (e) {
       state = state.copyWith(error: 'Error al cargar datos: $e');

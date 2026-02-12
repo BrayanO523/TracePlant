@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:state_notifier/state_notifier.dart';
 
-import '../../../../core/errors/result.dart';
 import '../../domain/entities/lote.dart';
 import '../../domain/repositories/produccion_repository.dart';
 
@@ -57,27 +56,6 @@ class LotesNotifier extends StateNotifier<LotesState> {
             );
           },
         );
-  }
-
-  Future<void> crearLote({
-    required String nombre,
-    required double area,
-    required String variedad,
-  }) async {
-    state = state.copyWith(isLoading: true, clearError: true);
-    final result = await _repository.crearLote(
-      nombre: nombre,
-      area: area,
-      variedad: variedad,
-      productoraId: productoraId,
-    );
-
-    switch (result) {
-      case Success():
-        state = state.copyWith(isLoading: false);
-      case FailureResult(failure: final f):
-        state = state.copyWith(isLoading: false, error: f.message);
-    }
   }
 
   @override

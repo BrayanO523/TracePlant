@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../home/presentation/screens/main_menu_screen.dart';
 import '../../../../app/di/providers.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -65,6 +66,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             content: Text(next.error.toString()),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
+        );
+      } else if (!next.isLoading && !next.hasError) {
+        // Login successful
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const MainMenuScreen()),
         );
       }
     });

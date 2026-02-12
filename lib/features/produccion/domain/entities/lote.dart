@@ -9,6 +9,7 @@ class Lote extends Equatable {
   final String variedad; // Variedad de cultivo
   final EstadoLote estado;
   final ColorCinta? colorCinta; // Color asignado al lote activo
+  final String fincaId;
   final String idProductora;
   final DateTime? fechaCreacion;
   final DateTime? fechaActualizacion;
@@ -18,6 +19,7 @@ class Lote extends Equatable {
     required this.nombre,
     required this.area,
     required this.variedad,
+    required this.fincaId,
     this.estado = EstadoLote.libre,
     this.colorCinta,
     required this.idProductora,
@@ -33,6 +35,7 @@ class Lote extends Equatable {
     variedad,
     estado,
     colorCinta,
+    fincaId,
     idProductora,
     fechaCreacion,
     fechaActualizacion,

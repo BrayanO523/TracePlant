@@ -51,12 +51,15 @@ class EstadoIndicador extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          Text(
-            _label,
-            style: theme.textTheme.labelMedium?.copyWith(
-              color: _backgroundColor,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.3,
+          Flexible(
+            child: Text(
+              _label,
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: _backgroundColor,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.3,
+              ),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
           if (colorCinta != null) ...[
@@ -81,10 +84,13 @@ class EstadoIndicador extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 4),
-            Text(
-              colorCinta!.label,
-              style: theme.textTheme.labelSmall?.copyWith(
-                fontWeight: FontWeight.w500,
+            Flexible(
+              child: Text(
+                colorCinta!.label,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  fontWeight: FontWeight.w500,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
@@ -96,7 +102,7 @@ class EstadoIndicador extends StatelessWidget {
   Color get _backgroundColor {
     if (estadoCiclo != null) {
       return switch (estadoCiclo!) {
-        EstadoCiclo.abierto => const Color(0xFFF9A825), // Ámbar
+        EstadoCiclo.sembrado => const Color(0xFFF9A825), // Ámbar
         EstadoCiclo.encintado => const Color(0xFF1E88E5), // Azul
         EstadoCiclo.cosechado => const Color(0xFF43A047), // Verde
         EstadoCiclo.cancelado => const Color(0xFFE53935), // Rojo
@@ -113,7 +119,7 @@ class EstadoIndicador extends StatelessWidget {
   String get _label {
     if (estadoCiclo != null) {
       return switch (estadoCiclo!) {
-        EstadoCiclo.abierto => 'Abierto',
+        EstadoCiclo.sembrado => 'Sembrado',
         EstadoCiclo.encintado => 'Encintado',
         EstadoCiclo.cosechado => 'Cosechado',
         EstadoCiclo.cancelado => 'Cancelado',

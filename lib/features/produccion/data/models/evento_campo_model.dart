@@ -51,10 +51,10 @@ class EventoCampoModel extends EventoCampo {
   }
 
   static TipoEvento _parseTipo(String? value) {
-    if (value == null) return TipoEvento.apertura;
+    if (value == null) return TipoEvento.siembra;
     return TipoEvento.values.firstWhere(
       (e) => e.name == value,
-      orElse: () => TipoEvento.apertura,
+      orElse: () => TipoEvento.siembra,
     );
   }
 }

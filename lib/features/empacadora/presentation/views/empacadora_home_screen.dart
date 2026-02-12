@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../app/di/providers.dart';
-import '../../../produccion/domain/entities/produccion_enums.dart'; // Para ColorCinta
+import '../../../produccion/domain/entities/produccion_enums.dart';
+import '../../../produccion/presentation/views/produccion_dashboard_screen.dart';
 import '../viewmodels/empacadora_dashboard_notifier.dart';
 
 class EmpacadoraHomeScreen extends ConsumerStatefulWidget {
@@ -73,7 +74,7 @@ class _EmpacadoraHomeScreenState extends ConsumerState<EmpacadoraHomeScreen> {
             : TabBarView(
                 children: [
                   _DashboardTab(state: state),
-                  _ProductorasTab(state: state),
+                  _ProductorasTab(state: state, companyId: companyId),
                 ],
               ),
       ),
@@ -122,7 +123,7 @@ class _DashboardTab extends StatelessWidget {
 
         const SizedBox(height: 24),
         const Text(
-          "Proyección por Color (Semana)",
+          "Proyección por Color",
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 12),
@@ -178,7 +179,7 @@ class _KpiCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -193,7 +194,7 @@ class _KpiCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(icon, color: color, size: isLarge ? 32 : 20),
@@ -277,7 +278,7 @@ class _ProyeccionCard extends StatelessWidget {
         border: Border(left: BorderSide(color: color, width: 6)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 5,
             offset: const Offset(0, 2),
           ),
@@ -328,7 +329,9 @@ class _ProyeccionCard extends StatelessWidget {
 
 class _ProductorasTab extends StatelessWidget {
   final EmpacadoraDashboardState state;
-  const _ProductorasTab({required this.state});
+  final String companyId;
+
+  const _ProductorasTab({required this.state, required this.companyId});
 
   @override
   Widget build(BuildContext context) {
@@ -372,9 +375,14 @@ class _ProductorasTab extends StatelessWidget {
             trailing: const Icon(Icons.chevron_right),
             isThreeLine: true,
             onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text("Detalle de ${productora.name} (Próximamente)"),
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) {
+                    return ProduccionDashboardScreen(
+                      productoraId: productora.id,
+                    );
+                  },
                 ),
               );
             },

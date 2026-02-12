@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../app/di/providers.dart';
+import '../../../empacadora/domain/entities/empacadora.dart'; // Import Empacadora
 import '../viewmodels/asignaciones_notifier.dart';
-import '../widgets/empacadora_selector.dart';
+import '../widgets/empacadora_selection_dialog.dart'; // Import dialog
+import '../widgets/productora_assignment_card.dart';
 import '../widgets/relaciones_map.dart';
-import '../../../productora/domain/entities/productora.dart';
 
 /// Panel de Administración — Dashboard de Asignación de Suministros.
 ///
-/// Permite al Admin vincular Productoras a Empacadoras y ver un mapa
-/// de relaciones resumido.
+/// Diseño Rediseñado (Master-Detail integrado):
+/// - Selector de Empacadora arriba.
+/// - Lista de Productoras abajo con detalle de lotes.
 class AdminHomeScreen extends ConsumerStatefulWidget {
   const AdminHomeScreen({super.key});
 
@@ -20,7 +22,7 @@ class AdminHomeScreen extends ConsumerStatefulWidget {
 class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  String? _selectedEmpacadoraId;
+  String _searchQuery = ''; // Nueva variable de estado para búsqueda
   final Set<String> _selectedProductoraIds = {};
 
   @override
@@ -40,7 +42,7 @@ class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen>
     final state = ref.watch(asignacionesNotifierProvider);
     final theme = Theme.of(context);
 
-    // Escuchar mensajes de éxito / error
+    // Listeners para mensajes
     ref.listen<AsignacionesState>(asignacionesNotifierProvider, (prev, next) {
       if (next.error != null) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -65,277 +67,286 @@ class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen>
           ),
         );
         ref.read(asignacionesNotifierProvider.notifier).clearMessages();
-        // Limpiar selección UI
         setState(() {
           _selectedProductoraIds.clear();
-          _selectedEmpacadoraId = null;
         });
       }
     });
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Panel de Administración'),
-        centerTitle: true,
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(icon: Icon(Icons.link_rounded), text: 'Asignar'),
-            Tab(icon: Icon(Icons.account_tree_rounded), text: 'Relaciones'),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded),
-            tooltip: 'Recargar datos',
-            onPressed: () {
-              ref.read(asignacionesNotifierProvider.notifier).refresh();
-            },
-          ),
-          // Logout
-          IconButton(
-            icon: const Icon(Icons.logout_rounded),
-            tooltip: 'Cerrar Sesión',
-            onPressed: () {
-              ref.read(authNotifierProvider.notifier).signOut();
-            },
-          ),
-        ],
-      ),
-      body: state.isLoading && state.asignaciones.isEmpty
-          ? const Center(child: CircularProgressIndicator())
-          : TabBarView(
-              controller: _tabController,
-              children: [
-                _buildAsignarTab(state, theme),
-                RelacionesMap(
-                  state: state,
-                  onDesasignar: (idAsignacion) {
-                    _showDesasignarDialog(context, idAsignacion);
+      body: NestedScrollView(
+        headerSliverBuilder: (context, innerBoxIsScrolled) {
+          return [
+            SliverAppBar(
+              title: const Text('Panel de Asignación'),
+              centerTitle: true,
+              pinned: true,
+              floating: true,
+              bottom: TabBar(
+                controller: _tabController,
+                tabs: const [
+                  Tab(icon: Icon(Icons.link_rounded), text: 'Asignar'),
+                  Tab(
+                    icon: Icon(Icons.account_tree_rounded),
+                    text: 'Relaciones',
+                  ),
+                ],
+              ),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.refresh_rounded),
+                  onPressed: () {
+                    ref.read(asignacionesNotifierProvider.notifier).refresh();
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.logout_rounded),
+                  onPressed: () {
+                    ref.read(authNotifierProvider.notifier).signOut();
                   },
                 ),
               ],
             ),
-      floatingActionButton:
-          _tabController.index == 0 &&
-              _selectedEmpacadoraId != null &&
-              _selectedProductoraIds.isNotEmpty
-          ? FloatingActionButton.extended(
-              onPressed: state.isLoading ? null : _confirmarAsignacion,
-              icon: const Icon(Icons.check_rounded),
-              label: Text(
-                'Asignar ${_selectedProductoraIds.length} productora(s)',
+          ];
+        },
+        body: state.isLoading && state.empacadoras.isEmpty
+            ? const Center(child: CircularProgressIndicator())
+            : TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildAsignarTab(state),
+                  RelacionesMap(
+                    state: state,
+                    onDesasignar: (id) => _showDesasignarDialog(context, id),
+                  ),
+                ],
               ),
+      ),
+      floatingActionButton:
+          _tabController.index == 0 && _selectedProductoraIds.isNotEmpty
+          ? FloatingActionButton.extended(
+              onPressed: state.isLoading
+                  ? null
+                  : () => _confirmarAsignacion(state),
+              icon: const Icon(Icons.send_rounded),
+              label: Text('Asignar ${_selectedProductoraIds.length}'),
             )
           : null,
     );
   }
 
   // ═══════════════════════════════════════════════════════
-  //  TAB ASIGNAR
+  //  TAB ASIGNAR (REDISEÑADO)
   // ═══════════════════════════════════════════════════════
 
-  Widget _buildAsignarTab(AsignacionesState state, ThemeData theme) {
-    return RefreshIndicator(
-      onRefresh: () async {
-        await ref.read(asignacionesNotifierProvider.notifier).refresh();
-      },
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-        children: [
-          // ── Paso 1: Seleccionar Empacadora ──
-          _buildSectionHeader(
-            theme,
-            icon: Icons.business_rounded,
-            title: 'Paso 1: Seleccionar Empacadora',
-            subtitle: 'Elige la empacadora que recibirá productoras',
-          ),
-          const SizedBox(height: 12),
+  // ═══════════════════════════════════════════════════════
+  //  TAB ASIGNAR (REDISEÑADO + ESCALABLE)
+  // ═══════════════════════════════════════════════════════
 
-          EmpacadoraSelector(
-            empacadoras: state.empacadoras,
-            cargaTrabajo: state.cargaTrabajo,
-            selectedId: _selectedEmpacadoraId,
-            onChanged: (id) {
-              setState(() {
-                _selectedEmpacadoraId = id;
-                _selectedProductoraIds.clear();
-              });
-            },
-          ),
+  Widget _buildAsignarTab(AsignacionesState state) {
+    // 1. Filtrado Local
+    final filteredProductoras = state.productorasDisponibles.where((p) {
+      final query = _searchQuery.toLowerCase();
+      return p.name.toLowerCase().contains(query) ||
+          (p.location?.toLowerCase().contains(query) ?? false);
+    }).toList();
 
-          const SizedBox(height: 28),
+    final allSelected =
+        filteredProductoras.isNotEmpty &&
+        filteredProductoras.every((p) => _selectedProductoraIds.contains(p.id));
 
-          // ── Paso 2: Seleccionar Productoras ──
-          _buildSectionHeader(
-            theme,
-            icon: Icons.agriculture_rounded,
-            title: 'Paso 2: Seleccionar Productoras',
-            subtitle: _selectedEmpacadoraId == null
-                ? 'Primero selecciona una empacadora'
-                : '${state.productorasDisponibles.length} disponibles',
-          ),
-          const SizedBox(height: 12),
-
-          if (_selectedEmpacadoraId == null)
-            _buildEmptyState(
-              theme,
-              icon: Icons.touch_app_rounded,
-              message: 'Selecciona una empacadora arriba para continuar',
-            )
-          else if (state.productorasDisponibles.isEmpty)
-            _buildEmptyState(
-              theme,
-              icon: Icons.check_circle_outline_rounded,
-              message: 'Todas las productoras ya están asignadas',
-            )
-          else
-            ..._buildProductorasList(state.productorasDisponibles, theme),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSectionHeader(
-    ThemeData theme, {
-    required IconData icon,
-    required String title,
-    required String subtitle,
-  }) {
-    return Row(
-      children: [
-        Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: theme.colorScheme.primaryContainer,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(icon, color: theme.colorScheme.onPrimaryContainer),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
+    return CustomScrollView(
+      slivers: [
+        // 1. Buscador + Acciones Masivas (Sticky Header)
+        SliverAppBar(
+          pinned: true,
+          floating: true,
+          automaticallyImplyLeading: false,
+          toolbarHeight: 80,
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          flexibleSpace: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    onChanged: (value) => setState(() => _searchQuery = value),
+                    decoration: InputDecoration(
+                      hintText: 'Buscar productora...',
+                      prefixIcon: const Icon(Icons.search),
+                      filled: true,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 0,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear, size: 20),
+                              onPressed: () =>
+                                  setState(() => _searchQuery = ''),
+                            )
+                          : null,
+                    ),
+                  ),
                 ),
-              ),
-              Text(
-                subtitle,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
+                const SizedBox(width: 12),
+                // Botón Seleccionar Todo
+                InkWell(
+                  onTap: () {
+                    setState(() {
+                      if (allSelected) {
+                        _selectedProductoraIds.clear();
+                      } else {
+                        _selectedProductoraIds.addAll(
+                          filteredProductoras.map((p) => p.id),
+                        );
+                      }
+                    });
+                  },
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      color: allSelected
+                          ? Theme.of(context).colorScheme.primaryContainer
+                          : Theme.of(context).colorScheme.surfaceContainer,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: allSelected
+                            ? Theme.of(context).colorScheme.primary
+                            : Colors.transparent,
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Icon(
+                      allSelected
+                          ? Icons.library_add_check_rounded
+                          : Icons.check_box_outline_blank_rounded,
+                      color: allSelected
+                          ? Theme.of(context).colorScheme.primary
+                          : Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
+
+        // 2. Título y Contador
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          sliver: SliverToBoxAdapter(
+            child: Row(
+              children: [
+                Text(
+                  'Productoras Disponibles',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surfaceContainerHigh,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '${filteredProductoras.length}',
+                    style: Theme.of(context).textTheme.labelSmall,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        // 3. Lista Filtrada
+        if (state.productorasDisponibles.isEmpty)
+          SliverFillRemaining(
+            hasScrollBody: false,
+            child: _buildEmptyState(
+              Icons.check_circle_outline_rounded,
+              '¡Todo asignado! No hay productoras pendientes.',
+            ),
+          )
+        else if (filteredProductoras.isEmpty)
+          SliverFillRemaining(
+            hasScrollBody: false,
+            child: _buildEmptyState(
+              Icons.search_off_rounded,
+              'No se encontraron productoras con "$_searchQuery"',
+            ),
+          )
+        else
+          SliverPadding(
+            padding: const EdgeInsets.only(left: 16, right: 16, bottom: 80),
+            sliver: SliverList(
+              delegate: SliverChildBuilderDelegate((context, index) {
+                final productora = filteredProductoras[index];
+                final isSelected = _selectedProductoraIds.contains(
+                  productora.id,
+                );
+                final lotes = state.lotesPorProductora[productora.id] ?? [];
+
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: ProductoraAssignmentCard(
+                    productora: productora,
+                    lotes: lotes,
+                    isSelected: isSelected,
+                    onSelectionChanged: (value) {
+                      setState(() {
+                        if (value) {
+                          _selectedProductoraIds.add(productora.id);
+                        } else {
+                          _selectedProductoraIds.remove(productora.id);
+                        }
+                      });
+                    },
+                  ),
+                );
+              }, childCount: filteredProductoras.length),
+            ),
+          ),
       ],
     );
   }
 
-  List<Widget> _buildProductorasList(
-    List<Productora> productoras,
-    ThemeData theme,
-  ) {
-    return productoras.map((p) {
-      final isSelected = _selectedProductoraIds.contains(p.id);
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 6),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? theme.colorScheme.primaryContainer.withValues(alpha: 0.4)
-                : theme.colorScheme.surfaceContainerHighest.withValues(
-                    alpha: 0.3,
-                  ),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: isSelected
-                  ? theme.colorScheme.primary
-                  : Colors.transparent,
-              width: 1.5,
+  Widget _buildEmptyState(IconData icon, String message) {
+    final theme = Theme.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 48,
+              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
             ),
-          ),
-          child: CheckboxListTile(
-            value: isSelected,
-            onChanged: (_) {
-              setState(() {
-                if (isSelected) {
-                  _selectedProductoraIds.remove(p.id);
-                } else {
-                  _selectedProductoraIds.add(p.id);
-                }
-              });
-            },
-            title: Text(
-              p.name,
+            const SizedBox(height: 16),
+            Text(
+              message,
+              textAlign: TextAlign.center,
               style: theme.textTheme.bodyLarge?.copyWith(
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-              ),
-            ),
-            subtitle: Text(
-              p.location ?? 'Sin ubicación',
-              style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
-            secondary: CircleAvatar(
-              backgroundColor: isSelected
-                  ? theme.colorScheme.primary
-                  : theme.colorScheme.surfaceContainerHighest,
-              child: Icon(
-                Icons.agriculture_rounded,
-                color: isSelected
-                    ? theme.colorScheme.onPrimary
-                    : theme.colorScheme.onSurfaceVariant,
-                size: 20,
-              ),
-            ),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
-            ),
-            controlAffinity: ListTileControlAffinity.trailing,
-          ),
+          ],
         ),
-      );
-    }).toList();
-  }
-
-  Widget _buildEmptyState(
-    ThemeData theme, {
-    required IconData icon,
-    required String message,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(32),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
-        ),
-      ),
-      child: Column(
-        children: [
-          Icon(
-            icon,
-            size: 40,
-            color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            message,
-            textAlign: TextAlign.center,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -344,13 +355,25 @@ class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen>
   //  ACCIONES
   // ═══════════════════════════════════════════════════════
 
-  void _confirmarAsignacion() {
-    if (_selectedEmpacadoraId == null || _selectedProductoraIds.isEmpty) return;
+  Future<void> _confirmarAsignacion(AsignacionesState state) async {
+    if (_selectedProductoraIds.isEmpty) return;
 
+    // 1. Abrir Modal de Selección de Empacadora
+    final selectedEmpacadora = await showDialog<Empacadora>(
+      context: context,
+      builder: (ctx) => EmpacadoraSelectionDialog(
+        empacadoras: state.empacadoras,
+        cargaTrabajo: state.cargaTrabajo,
+      ),
+    );
+
+    if (selectedEmpacadora == null) return; // Cancelado
+
+    // 2. Ejecutar Asignación Batch
     ref
         .read(asignacionesNotifierProvider.notifier)
         .asignarBatch(
-          idEmpacadora: _selectedEmpacadoraId!,
+          idEmpacadora: selectedEmpacadora.id,
           idsProductoras: _selectedProductoraIds.toList(),
         );
   }

@@ -239,4 +239,49 @@ class AsignacionesRemoteDatasource {
       'fecha_finalizacion': FieldValue.serverTimestamp(),
     });
   }
+  // ═══════════════════════════════════════════════════════
+  //  CONSULTAS CRUZADAS (Producción)
+  // ═══════════════════════════════════════════════════════
+
+  CollectionReference get _lotesRef =>
+      _firestore.collection(FirestorePaths.lotes);
+
+  /// Obtiene los lotes de una lista de productoras.
+  ///
+  /// Útil para mostrar detalle en el selector de asignación.
+  Future<List<dynamic>> getLotesPorProductoras(
+    List<String> idsProductoras,
+  ) async {
+    if (idsProductoras.isEmpty) return [];
+
+    // Firestore 'whereIn' soporta máximo 10 valores.
+    // Si son más, hay que hacer múltiples queries o iterar.
+    // Para simplificar y dado que 'Lotes' es una colección root con 'id_productora',
+    // podemos hacer chunks de 10.
+
+    final List<dynamic> allLotes = [];
+    final chunks = <List<String>>[];
+
+    for (var i = 0; i < idsProductoras.length; i += 10) {
+      chunks.add(
+        idsProductoras.sublist(
+          i,
+          i + 10 > idsProductoras.length ? idsProductoras.length : i + 10,
+        ),
+      );
+    }
+
+    // Importar dinámicamente LoteModel aquí podría ser un problema si no tenemos acceso
+    // al tipo LoteModel dentro del datasource de Asignaciones si no importamos el archivo.
+    // Sin embargo, devolveremos List<QueryDocumentSnapshot> o Map para que el Repo mapee.
+    // Mejor retornamos List<Map<String, dynamic>>.
+
+    for (final chunk in chunks) {
+      final snap = await _lotesRef.where('id_productora', whereIn: chunk).get();
+
+      allLotes.addAll(snap.docs.map((d) => d.data()));
+    }
+
+    return allLotes;
+  }
 }

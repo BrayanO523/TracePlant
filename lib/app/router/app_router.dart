@@ -7,8 +7,8 @@ import '../di/providers.dart';
 import '../../../core/constants/role_constants.dart';
 import '../../../features/auth/presentation/views/login_screen.dart';
 import '../../../features/auth/presentation/views/register_screen.dart';
-import '../../../features/produccion/presentation/views/produccion_home_screen.dart';
 import '../../../features/asignaciones/presentation/views/admin_home_screen.dart';
+import '../../../features/produccion/presentation/views/produccion_dashboard_screen.dart';
 import '../../../features/empacadora/presentation/views/empacadora_home_screen.dart';
 
 // Placeholders are defined at the bottom of this file
@@ -26,10 +26,6 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       final isLoggingIn =
           state.uri.path == '/login' || state.uri.path == '/register';
 
-      print(
-        'ROUTER DEBUG: Path: ${state.uri.path}, User: ${user?.email}, Role: ${user?.role}, Loading: ${userState.isLoading}',
-      );
-
       if (userState.isLoading) return null; // Esperar a que cargue
 
       if (!isLoggedIn) {
@@ -38,10 +34,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
 
       // If logged in and on login page, redirect to home
       if (isLoggingIn) {
-        print(
-          'ROUTER DEBUG: Redirecting from login based on role: ${user?.role}',
-        );
-        switch (user!.role) {
+        switch (user.role) {
           case UserRole.admin:
             return '/admin';
           case UserRole.productora:
@@ -74,7 +67,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           // Obtener productoraId del usuario logueado
           final user = userState.asData?.value;
           final productoraId = user?.companyId ?? '';
-          return ProduccionHomeScreen(productoraId: productoraId);
+          return ProduccionDashboardScreen(productoraId: productoraId);
         },
       ),
       GoRoute(

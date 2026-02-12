@@ -1,11 +1,11 @@
 /// Tipo de evento en el ciclo de producción
-enum TipoEvento { apertura, encintado, cosecha }
+enum TipoEvento { siembra, encintado, cosecha }
 
 /// Estado de un lote físico
 enum EstadoLote { libre, ocupado }
 
 /// Estado del ciclo de producción
-enum EstadoCiclo { abierto, encintado, cosechado, cancelado }
+enum EstadoCiclo { sembrado, encintado, cosechado, cancelado }
 
 /// Catálogo fijo de colores de cinta.
 /// Cada color tiene un nombre para UI y un valor hex para visualización.

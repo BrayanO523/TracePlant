@@ -7,7 +7,7 @@ class DataSeeder {
 
   Future<void> seedProduccion(String productoraId) async {
     if (kDebugMode) {
-      print("SEEDING DATA FOR PRODUCTORA: $productoraId");
+      //  print("SEEDING DATA FOR PRODUCTORA: $productoraId");
     }
 
     final batch = _firestore.batch();
@@ -27,29 +27,24 @@ class DataSeeder {
     // 2. Crear Lotes con area y variedad
     final lotesData = [
       {
-        'nombre': 'Lote Alpha',
+        'nombre': 'LOTE A',
         'estado': 'libre',
         'area': 3.5,
-        'variedad': 'Cavendish',
+        'variedad': 'Sandía',
       },
+      {'nombre': 'LOTE B', 'estado': 'libre', 'area': 2.0, 'variedad': 'Melón'},
       {
-        'nombre': 'Lote Beta',
-        'estado': 'libre',
-        'area': 2.0,
-        'variedad': 'Williams',
-      },
-      {
-        'nombre': 'Lote Gamma',
+        'nombre': 'LOTE C',
         'estado': 'ocupado',
         'area': 4.2,
-        'variedad': 'Gran Enano',
+        'variedad': 'Arroz',
         'color_cinta': 'rojo',
       },
       {
-        'nombre': 'Lote Delta',
+        'nombre': 'LOTE D',
         'estado': 'libre',
         'area': 1.8,
-        'variedad': 'Valery',
+        'variedad': 'Frijoles',
       },
     ];
 
@@ -70,38 +65,38 @@ class DataSeeder {
       });
     }
 
-    // 3. Ciclo abierto para Lote Gamma
+    // 3. Ciclo abierto para Lote C (Arroz)
     final docRefCiclo = _firestore.collection('ciclos_produccion').doc();
     final fechaInicio = DateTime.now().subtract(const Duration(days: 5));
-    final idLoteGamma = loteIds['Lote Gamma']!;
+    final idLoteC = loteIds['LOTE C']!;
 
     batch.set(docRefCiclo, {
       'id': docRefCiclo.id,
-      'id_lote': idLoteGamma,
-      'nombre_lote': 'Lote Gamma',
+      'id_lote': idLoteC,
+      'nombre_lote': 'LOTE C',
       'id_productora': productoraId,
       'estado': 'abierto',
       'fecha_apertura': Timestamp.fromDate(fechaInicio),
       'area': 4.2,
-      'variedad': 'Gran Enano',
+      'variedad': 'Arroz',
       'uid_registrado_por': productoraId,
       'fecha_creacion': FieldValue.serverTimestamp(),
     });
 
-    // 4. Ciclo cosechado (historial)
+    // 4. Ciclo cosechado (historial) - Lote A (Sandía)
     final docRefCiclo2 = _firestore.collection('ciclos_produccion').doc();
     final fechaInicio2 = DateTime.now().subtract(const Duration(days: 30));
-    final idLoteAlpha = loteIds['Lote Alpha']!;
+    final idLoteA = loteIds['LOTE A']!;
 
     batch.set(docRefCiclo2, {
       'id': docRefCiclo2.id,
-      'id_lote': idLoteAlpha,
-      'nombre_lote': 'Lote Alpha',
+      'id_lote': idLoteA,
+      'nombre_lote': 'LOTE A',
       'id_productora': productoraId,
       'estado': 'cosechado',
       'fecha_apertura': Timestamp.fromDate(fechaInicio2),
       'area': 3.5,
-      'variedad': 'Cavendish',
+      'variedad': 'Sandía',
       'color_cinta': 'azul',
       'cantidad_encintado': 520.0,
       'fecha_encintado': Timestamp.fromDate(
@@ -117,7 +112,7 @@ class DataSeeder {
 
     await batch.commit();
     if (kDebugMode) {
-      print("SEED COMPLETE");
+      //  print("SEED COMPLETE");
     }
   }
 }

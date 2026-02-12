@@ -1,6 +1,7 @@
 import '../../../../core/errors/result.dart';
 import '../../../productora/domain/entities/productora.dart';
 import '../../../empacadora/domain/entities/empacadora.dart';
+import '../../../produccion/domain/entities/lote.dart';
 import '../entities/asignacion.dart';
 
 /// Contrato del repositorio de asignaciones.
@@ -34,4 +35,9 @@ abstract class AsignacionesRepository {
 
   /// Mapa de carga de trabajo: empacadoraId → cantidad de productoras asignadas.
   Future<Map<String, int>> getCargaTrabajo();
+
+  /// Obtiene los lotes de las productoras especificadas (para detalle en UI).
+  Future<Map<String, List<Lote>>> getLotesDeProductoras(
+    List<String> idsProductoras,
+  );
 }
