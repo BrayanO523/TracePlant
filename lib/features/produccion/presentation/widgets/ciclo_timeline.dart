@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
 import '../../domain/entities/ciclo_produccion.dart';
 import '../../domain/entities/produccion_enums.dart';
-import 'color_cinta_ext.dart';
+
+Color _parseColor(String hex) {
+  final buffer = StringBuffer();
+  if (hex.length == 6 || hex.length == 7) buffer.write('ff');
+  buffer.write(hex.replaceFirst('#', ''));
+  return Color(int.parse(buffer.toString(), radix: 16));
+}
 
 /// Timeline visual premium para un ciclo de producción.
 class CicloTimeline extends StatelessWidget {
@@ -12,6 +18,94 @@ class CicloTimeline extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
+    // Lista de pasos a renderizar
+    final steps = <Widget>[];
+
+    // 1. SIEMBRA
+    steps.add(
+      _buildStep(
+        context,
+        icon: Icons.grass_rounded,
+        color: const Color(0xFFF9A825), // Amber
+        title: 'Siembra',
+        subtitle: '${ciclo.area.toStringAsFixed(1)} mz · ${ciclo.variedad}',
+        date: ciclo.fechaSiembra,
+        isCompleted: true,
+      ),
+    );
+
+    // 2. ENCINTADOS (Múltiples)
+    if (ciclo.encintados.isNotEmpty) {
+      steps.add(_buildConnector(context, true));
+
+      for (var i = 0; i < ciclo.encintados.length; i++) {
+        final encintado = ciclo.encintados[i];
+        final isLastEncintado = i == ciclo.encintados.length - 1;
+        final isCosechado = ciclo.estado == EstadoCiclo.cosechado;
+
+        steps.add(
+          _buildStep(
+            context,
+            icon: Icons.bookmark_rounded,
+            color: _parseColor(encintado.cintaColorHex),
+            title: 'Encintado ${i + 1}',
+            subtitle:
+                '${encintado.cintaNombre} · ${encintado.cantidad.toStringAsFixed(2)} uds',
+            date: encintado.fecha,
+            isCompleted: true,
+            cintaColorHex: encintado.cintaColorHex,
+          ),
+        );
+
+        // Si no es el último evento (hay cosecha, o hay más encintados), conector activo
+        if (!isLastEncintado || isCosechado) {
+          steps.add(_buildConnector(context, true));
+        }
+      }
+    } else {
+      // Si no hay encintados pero el estado avanza (raro, pero defensive)
+      if (ciclo.estado != EstadoCiclo.sembrado) {
+        steps.add(_buildConnector(context, false));
+        steps.add(
+          _buildStep(
+            context,
+            icon: Icons.bookmark_border_rounded,
+            title: 'Encintado',
+            subtitle: 'Pendiente',
+            isCompleted: false,
+            color: const Color(0xFF1E88E5), // Blue default
+          ),
+        );
+      }
+    }
+
+    // 3. COSECHA
+    if (ciclo.estado == EstadoCiclo.cosechado ||
+        (ciclo.encintados.isNotEmpty &&
+            ciclo.estado == EstadoCiclo.encintado)) {
+      // Mostrar nodo de Cosecha (Pendiente o Completado) si ya hay encintados
+      final isCosechado = ciclo.estado == EstadoCiclo.cosechado;
+
+      if (!isCosechado && ciclo.encintados.isNotEmpty) {
+        steps.add(_buildConnector(context, false));
+      }
+
+      steps.add(
+        _buildStep(
+          context,
+          icon: Icons.agriculture_rounded,
+          color: const Color(0xFF43A047), // Green
+          title: 'Cosecha',
+          subtitle: isCosechado && ciclo.cantidadCosecha != null
+              ? '${ciclo.cantidadCosecha!.toStringAsFixed(0)} uds · Merma: ${ciclo.merma?.toStringAsFixed(1) ?? "—"}'
+              : 'Pendiente',
+          date: ciclo.fechaCosecha,
+          isCompleted: isCosechado,
+          isLast: true,
+        ),
+      );
+    }
 
     return Card(
       elevation: 0,
@@ -42,7 +136,7 @@ class CicloTimeline extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
-                    Icons.loop_rounded,
+                    Icons.history_edu_rounded,
                     color: _estadoColor,
                     size: 22,
                   ),
@@ -70,47 +164,10 @@ class CicloTimeline extends StatelessWidget {
                 _buildEstadoBadge(theme),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
 
-            // Timeline steps
-            _buildStep(
-              context,
-              icon: Icons.play_circle_rounded,
-              color: const Color(0xFFF9A825),
-              title: 'Apertura',
-              subtitle:
-                  '${ciclo.area.toStringAsFixed(1)} mz · ${ciclo.variedad}',
-              date: ciclo.fechaApertura,
-              isCompleted: true,
-            ),
-            _buildConnector(context, ciclo.estado != EstadoCiclo.abierto),
-            _buildStep(
-              context,
-              icon: Icons.bookmark_rounded,
-              color: ciclo.colorCinta?.color ?? const Color(0xFF1E88E5),
-              title: 'Encintado',
-              subtitle: ciclo.colorCinta != null
-                  ? '${ciclo.colorCinta!.label} · ${ciclo.cantidadEncintado?.toStringAsFixed(0) ?? "-"} uds'
-                  : 'Pendiente',
-              date: ciclo.fechaEncintado,
-              isCompleted: ciclo.estado != EstadoCiclo.abierto,
-              cintaColor: ciclo.colorCinta,
-            ),
-            _buildConnector(context, ciclo.estado == EstadoCiclo.cosechado),
-            _buildStep(
-              context,
-              icon: Icons.agriculture_rounded,
-              color: const Color(0xFF43A047),
-              title: 'Cosecha',
-              subtitle: ciclo.cantidadCosecha != null
-                  ? '${ciclo.cantidadCosecha!.toStringAsFixed(0)} uds · '
-                        'Merma: ${ciclo.merma?.toStringAsFixed(1) ?? "—"} '
-                        '(${ciclo.mermaPorcentaje?.toStringAsFixed(1) ?? "—"}%)'
-                  : 'Pendiente',
-              date: ciclo.fechaCosecha,
-              isCompleted: ciclo.estado == EstadoCiclo.cosechado,
-              isLast: true,
-            ),
+            // Renderizamos los steps dinámicos
+            ...steps,
           ],
         ),
       ),
@@ -143,92 +200,99 @@ class CicloTimeline extends StatelessWidget {
     DateTime? date,
     bool isCompleted = false,
     bool isLast = false,
-    ColorCinta? cintaColor,
+    String? cintaColorHex,
   }) {
     final theme = Theme.of(context);
     final effectiveColor = isCompleted
         ? color
         : theme.colorScheme.outlineVariant;
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Column(
-          children: [
-            Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: effectiveColor.withValues(alpha: 0.12),
-                border: Border.all(color: effectiveColor, width: 2),
-                boxShadow: isCompleted
-                    ? [
-                        BoxShadow(
-                          color: effectiveColor.withValues(alpha: 0.2),
-                          blurRadius: 6,
-                          spreadRadius: 1,
-                        ),
-                      ]
-                    : null,
-              ),
-              child: Icon(icon, size: 16, color: effectiveColor),
-            ),
-          ],
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Icono y línea vertical (si no es el último)
+          Column(
             children: [
-              Row(
-                children: [
-                  Text(
-                    title,
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: isCompleted
-                          ? null
-                          : theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  if (cintaColor != null) ...[
-                    const SizedBox(width: 6),
-                    Container(
-                      width: 12,
-                      height: 12,
-                      decoration: BoxDecoration(
-                        color: cintaColor.color,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: theme.colorScheme.outline.withValues(
-                            alpha: 0.3,
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: effectiveColor.withValues(alpha: 0.12),
+                  border: Border.all(color: effectiveColor, width: 2),
+                  boxShadow: isCompleted
+                      ? [
+                          BoxShadow(
+                            color: effectiveColor.withValues(alpha: 0.2),
+                            blurRadius: 6,
+                            spreadRadius: 1,
                           ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-              const SizedBox(height: 2),
-              Text(
-                subtitle,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
+                        ]
+                      : null,
                 ),
+                child: Icon(icon, size: 16, color: effectiveColor),
               ),
-              if (date != null)
-                Text(
-                  _formatDate(date),
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: theme.colorScheme.outline,
-                  ),
-                ),
-              if (!isLast) const SizedBox(height: 4),
+              // El conector se maneja externamente en el loop principal
             ],
           ),
-        ),
-      ],
+          const SizedBox(width: 12),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 12.0), // Spacing
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        title,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: isCompleted
+                              ? null
+                              : theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      if (cintaColorHex != null) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          width: 10,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            color: _parseColor(cintaColorHex),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: theme.colorScheme.outline.withValues(
+                                alpha: 0.3,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  if (date != null)
+                    Text(
+                      _formatDate(date),
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.outline,
+                        fontSize: 10,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -237,33 +301,26 @@ class CicloTimeline extends StatelessWidget {
         ? Theme.of(context).colorScheme.primary
         : Theme.of(context).colorScheme.outlineVariant;
     return Padding(
-      padding: const EdgeInsets.only(left: 15),
+      padding: const EdgeInsets.only(
+        left: 15,
+      ), // Center align with 32px circle (16 - 1 = 15)
       child: Container(
         width: 2,
-        height: 20,
-        decoration: BoxDecoration(
-          gradient: isActive
-              ? LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [color, color.withValues(alpha: 0.5)],
-                )
-              : null,
-          color: isActive ? null : color,
-        ),
+        height: 24, // Altura fija del conector entre nodos
+        color: isActive ? color : color.withValues(alpha: 0.5),
       ),
     );
   }
 
   Color get _estadoColor => switch (ciclo.estado) {
-    EstadoCiclo.abierto => const Color(0xFFF9A825),
+    EstadoCiclo.sembrado => const Color(0xFFF9A825),
     EstadoCiclo.encintado => const Color(0xFF1E88E5),
     EstadoCiclo.cosechado => const Color(0xFF43A047),
     EstadoCiclo.cancelado => const Color(0xFFE53935),
   };
 
   String get _estadoLabel => switch (ciclo.estado) {
-    EstadoCiclo.abierto => 'Abierto',
+    EstadoCiclo.sembrado => 'Sembrado',
     EstadoCiclo.encintado => 'Encintado',
     EstadoCiclo.cosechado => 'Cosechado',
     EstadoCiclo.cancelado => 'Cancelado',

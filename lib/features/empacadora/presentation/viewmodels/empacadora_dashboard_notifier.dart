@@ -2,7 +2,8 @@ import 'dart:async';
 import 'package:equatable/equatable.dart';
 import 'package:state_notifier/state_notifier.dart';
 import '../../../produccion/domain/entities/ciclo_produccion.dart';
-import '../../../produccion/domain/entities/produccion_enums.dart';
+import '../../../produccion/domain/entities/produccion_enums.dart'; // Restore import
+
 import '../../../productora/domain/entities/productora.dart';
 import '../../domain/repositories/empacadora_repository.dart';
 
@@ -19,8 +20,8 @@ class EmpacadoraDashboardState extends Equatable {
   // Métricas agregadas
   final double totalHectareasActivas;
   final double totalKilosProyectados; // Basado en encintado
-  final Map<ColorCinta, double> proyeccionPorColor; // Kilos por color
-  final Map<ColorCinta, int> cantidadCiclosPorColor;
+  final Map<String, double> proyeccionPorColor; // Kilos por nombre de cinta
+  final Map<String, int> cantidadCiclosPorColor;
 
   const EmpacadoraDashboardState({
     this.isLoading = true,
@@ -40,8 +41,8 @@ class EmpacadoraDashboardState extends Equatable {
     List<CicloProduccion>? ciclosActivos,
     double? totalHectareasActivas,
     double? totalKilosProyectados,
-    Map<ColorCinta, double>? proyeccionPorColor,
-    Map<ColorCinta, int>? cantidadCiclosPorColor,
+    Map<String, double>? proyeccionPorColor,
+    Map<String, int>? cantidadCiclosPorColor,
   }) {
     return EmpacadoraDashboardState(
       isLoading: isLoading ?? this.isLoading,
@@ -126,36 +127,35 @@ class EmpacadoraDashboardNotifier
   void _procesarCiclos(List<CicloProduccion> ciclos) {
     double totalAreas = 0;
     double totalKilos = 0;
-    final Map<ColorCinta, double> porColor = {};
-    final Map<ColorCinta, int> countPorColor = {};
+    final Map<String, double> porColor = {};
+    final Map<String, int> countPorColor = {};
 
     for (var ciclo in ciclos) {
-      // Filtrar solo ciclos relevantes (abiertos o encintados)
-      if (ciclo.estado == EstadoCiclo.cosechado) {
+      // Filtrar solo ciclos relevantes (sembrados o encintados)
+      if (ciclo.estado == EstadoCiclo.cosechado ||
+          ciclo.estado == EstadoCiclo.cancelado) {
         continue;
       }
 
       // Sumar Hectáreas
-      totalAreas += ciclo.area; // Asumimos unidad consistente
+      totalAreas += ciclo.area;
 
-      // Proyección solo si está encintado
-      if (ciclo.fechaEncintado != null && ciclo.cantidadEncintado != null) {
-        // Asumimos cantidadEncintado es el volumen estimado bruto
-        totalKilos += ciclo.cantidadEncintado!;
+      // Proyección basada en encintados
+      for (var encintado in ciclo.encintados) {
+        // Asumimos encintado.cantidad es el volumen estimado bruto
+        totalKilos += encintado.cantidad;
 
-        if (ciclo.colorCinta != null) {
-          porColor.update(
-            ciclo.colorCinta!,
-            (val) => val + ciclo.cantidadEncintado!,
-            ifAbsent: () => ciclo.cantidadEncintado!,
-          );
+        porColor.update(
+          encintado.cintaNombre,
+          (val) => val + encintado.cantidad,
+          ifAbsent: () => encintado.cantidad,
+        );
 
-          countPorColor.update(
-            ciclo.colorCinta!,
-            (val) => val + 1,
-            ifAbsent: () => 1,
-          );
-        }
+        countPorColor.update(
+          encintado.cintaNombre,
+          (val) => val + 1,
+          ifAbsent: () => 1,
+        );
       }
     }
 
