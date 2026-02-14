@@ -12,6 +12,7 @@ class ProductoraModel extends Productora {
     super.contactEmail,
     super.isActive,
     required super.ownerUid,
+    super.semanasParaCosecha,
     super.createdAt,
     super.updatedAt,
   });
@@ -28,6 +29,7 @@ class ProductoraModel extends Productora {
       contactEmail: data['correo_contacto'],
       isActive: data['activo'] ?? true,
       ownerUid: data['uid_propietario'] ?? '',
+      semanasParaCosecha: (data['semanas_para_cosecha'] as num?)?.toInt() ?? 30,
       createdAt: (data['fecha_creacion'] as Timestamp?)?.toDate(),
       updatedAt: (data['fecha_actualizacion'] as Timestamp?)?.toDate(),
     );
@@ -43,6 +45,7 @@ class ProductoraModel extends Productora {
       'correo_contacto': contactEmail,
       'activo': isActive,
       'uid_propietario': ownerUid,
+      'semanas_para_cosecha': semanasParaCosecha,
       if (createdAt != null) 'fecha_creacion': Timestamp.fromDate(createdAt!),
       'fecha_actualizacion': FieldValue.serverTimestamp(),
     };
