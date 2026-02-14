@@ -312,13 +312,60 @@ class ProduccionRemoteDatasource {
   }
 
   // ═══════════════════════════════════════════════════════
+  //  ENTREGA A EMPACADORA
+  // ═══════════════════════════════════════════════════════
+
+  Future<CicloProduccionModel> registrarEntrega({
+    required String idCiclo,
+    required String productoraId,
+    required String uidUsuario,
+  }) async {
+    final cicloDoc = await _ciclosRef().doc(idCiclo).get();
+    if (!cicloDoc.exists) {
+      throw const NotFoundFailure('Ciclo de producción no encontrado');
+    }
+
+    final ciclo = CicloProduccionModel.fromFirestore(cicloDoc);
+
+    if (ciclo.estado != EstadoCiclo.cosechado) {
+      throw const ValidationFailure(
+        'Solo se puede entregar un ciclo en estado "Cosechado"',
+      );
+    }
+
+    final now = DateTime.now();
+
+    await _ciclosRef().doc(idCiclo).update({
+      'estado': EstadoCiclo.entregado.name,
+      'fecha_entrega': Timestamp.fromDate(now),
+      'fecha_actualizacion': FieldValue.serverTimestamp(),
+    });
+
+    return CicloProduccionModel(
+      id: idCiclo,
+      idLote: ciclo.idLote,
+      nombreLote: ciclo.nombreLote,
+      idProductora: productoraId,
+      estado: EstadoCiclo.entregado,
+      fechaSiembra: ciclo.fechaSiembra,
+      area: ciclo.area,
+      variedad: ciclo.variedad,
+      encintados: ciclo.encintados,
+      cantidadCosecha: ciclo.cantidadCosecha,
+      merma: ciclo.merma,
+      mermaPorcentaje: ciclo.mermaPorcentaje,
+      idEmpacadora: ciclo.idEmpacadora,
+      uidRegistradoPor: uidUsuario,
+      fechaCosecha: ciclo.fechaCosecha,
+      fechaEntrega: now,
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════
   //  ESTADÍSTICAS (VISTA PREVIA)
   // ═══════════════════════════════════════════════════════
 
   Future<Map<String, dynamic>> getStatsProductora(String productoraId) async {
-    // Obtenemos todos los ciclos de esta productora con una sola condición.
-    // Filtramos cancelados en cliente para NO requerir índice compuesto.
-
     final snap = await _ciclosRef()
         .where('id_productora', isEqualTo: productoraId)
         .get();
@@ -335,8 +382,9 @@ class ProduccionRemoteDatasource {
       // Saltar ciclos cancelados (filtro client-side)
       if (ciclo.estado == EstadoCiclo.cancelado) continue;
 
-      // Contar ciclos activos (sembrado + encintado, no cosechado)
-      if (ciclo.estado != EstadoCiclo.cosechado) {
+      // Contar ciclos activos (sembrado + encintado, no cosechado/entregado)
+      if (ciclo.estado != EstadoCiclo.cosechado &&
+          ciclo.estado != EstadoCiclo.entregado) {
         ciclosActivos++;
         lotesIds.add(ciclo.idLote);
       }
@@ -345,7 +393,6 @@ class ProduccionRemoteDatasource {
       volumenCosecha += ciclo.cantidadCosecha ?? 0;
 
       // Volumen En Cinta (Inventario Activo): Solo lo que está ACTUALMENTE madurando en el campo.
-      // Si el ciclo ya se cosechó, esa cinta ya no cuenta como "pendiente".
       if (ciclo.estado == EstadoCiclo.encintado) {
         volumenEncintado += ciclo.totalEncintado;
       }

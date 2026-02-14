@@ -253,6 +253,36 @@ class ProduccionNotifier extends StateNotifier<ProduccionState> {
     }
   }
 
+  Future<bool> registrarEntrega({
+    required String idCiclo,
+    required String uidUsuario,
+  }) async {
+    state = state.copyWith(
+      isLoading: true,
+      clearError: true,
+      clearSuccess: true,
+    );
+
+    final result = await _repository.registrarEntrega(
+      idCiclo: idCiclo,
+      productoraId: productoraId,
+      uidUsuario: uidUsuario,
+    );
+
+    switch (result) {
+      case Success(data: final ciclo):
+        state = state.copyWith(
+          isLoading: false,
+          cicloSeleccionado: ciclo,
+          successMessage: 'Entrega registrada exitosamente',
+        );
+        return true;
+      case FailureResult(failure: final f):
+        state = state.copyWith(isLoading: false, error: f.message);
+        return false;
+    }
+  }
+
   void clearMessages() {
     state = state.copyWith(clearError: true, clearSuccess: true);
   }

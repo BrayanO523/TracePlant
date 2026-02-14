@@ -46,6 +46,12 @@ abstract class ProduccionRepository {
     required String uidUsuario,
   });
 
+  Future<Result<CicloProduccion>> registrarEntrega({
+    required String idCiclo,
+    required String productoraId,
+    required String uidUsuario,
+  });
+
   // --- Estadísticas (Vista Previa) ---
   Future<Result<ProductoraStats>> getStatsProductora(String productoraId);
 }

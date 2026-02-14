@@ -21,6 +21,7 @@ class CicloProduccion {
   final double? mermaPorcentaje;
   final String? uidRegistradoPor;
   final String? idEmpacadora;
+  final DateTime? fechaEntrega;
 
   final DateTime? fechaCreacion;
   final DateTime? fechaActualizacion;
@@ -41,12 +42,16 @@ class CicloProduccion {
     this.mermaPorcentaje,
     this.uidRegistradoPor,
     this.idEmpacadora,
+    this.fechaEntrega,
     this.fechaCreacion,
     this.fechaActualizacion,
   });
 
   // Helper para suma total encintado
   double get totalEncintado => encintados.fold(0, (sum, e) => sum + e.cantidad);
+
+  /// true si el ciclo fue cosechado pero NO entregado a empacadora
+  bool get pendienteEntrega => estado == EstadoCiclo.cosechado;
 
   /// Fecha del último encintado registrado (null si no hay encintados)
   DateTime? get ultimoEncintadoFecha {

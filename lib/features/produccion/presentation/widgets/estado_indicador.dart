@@ -106,6 +106,7 @@ class EstadoIndicador extends StatelessWidget {
         EstadoCiclo.sembrado => AppColors.estadoSembrado,
         EstadoCiclo.encintado => AppColors.estadoEncintado,
         EstadoCiclo.cosechado => AppColors.estadoCosechado,
+        EstadoCiclo.entregado => AppColors.estadoEntregado,
         EstadoCiclo.cancelado => AppColors.estadoCancelado,
       };
     }
@@ -123,6 +124,7 @@ class EstadoIndicador extends StatelessWidget {
         EstadoCiclo.sembrado => 'Sembrado',
         EstadoCiclo.encintado => 'Encintado',
         EstadoCiclo.cosechado => 'Cosechado',
+        EstadoCiclo.entregado => 'Entregado',
         EstadoCiclo.cancelado => 'Cancelado',
       };
     }
