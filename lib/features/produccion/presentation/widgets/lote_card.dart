@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../domain/entities/lote.dart';
 import '../../domain/entities/produccion_enums.dart';
-import 'estado_indicador.dart';
 
-/// Card premium de lote con info de área, variedad, y estado visual.
+/// Card de lote rediseñada para LISTA (Compacta/Horizontal).
+/// Maximiza el espacio y muestra la información clave en una fila.
 class LoteCard extends StatelessWidget {
   final Lote lote;
   final VoidCallback? onTap;
@@ -13,101 +13,82 @@ class LoteCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final isOcupado = lote.estado == EstadoLote.ocupado;
-    final accentColor = isOcupado
+    final statusColor = isOcupado
         ? AppColors.estadoSembrado
-        : AppColors.estadoCosechado;
+        : AppColors.estadoCosechado; // Verde para disponible
 
     return Card(
       elevation: 0,
+      color: Colors.white,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: isOcupado
-              ? accentColor.withValues(alpha: 0.4)
-              : theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
-          width: isOcupado ? 1.5 : 1,
-        ),
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.grey.shade200),
       ),
+      margin: const EdgeInsets.only(bottom: 8), // Margen inferior para lista
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Row(
             children: [
-              // Ícono con gradiente
+              // 1. Icono de Estado (Izquierda)
               Container(
-                width: 52,
-                height: 52,
+                width: 44,
+                height: 44,
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      accentColor.withValues(alpha: 0.15),
-                      accentColor.withValues(alpha: 0.05),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: accentColor.withValues(alpha: 0.2)),
+                  color: statusColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(Icons.grass_rounded, color: accentColor, size: 26),
+                child: Icon(
+                  isOcupado ? Icons.grass_rounded : Icons.check_circle_outline,
+                  color: statusColor,
+                  size: 24,
+                ),
               ),
-              const SizedBox(width: 14),
-              // Info principal
+              const SizedBox(width: 16),
+
+              // 2. Info Principal (Centro)
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       lote.nombre,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.2,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    // Área y variedad
-                    Row(
-                      children: [
-                        _InfoChip(
-                          icon: Icons.square_foot_rounded,
-                          label: '${lote.area.toStringAsFixed(1)} mz',
-                          theme: theme,
-                        ),
-                        const SizedBox(width: 8),
-                        _InfoChip(
-                          icon: Icons.eco_rounded,
-                          label: lote.variedad,
-                          theme: theme,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    EstadoIndicador(
-                      estadoLote: lote.estado,
-                      colorCinta: lote.colorCinta,
+                    const SizedBox(height: 2),
+                    Text(
+                      '${lote.area.toStringAsFixed(1)} mz • ${lote.variedad}',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                   ],
                 ),
               ),
-              // Flecha
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHighest.withValues(
-                    alpha: 0.5,
+
+              // 3. Status Badge + Chevron (Derecha)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  _StatusBadge(
+                    text: isOcupado ? 'Sembrado' : 'Disponible',
+                    color: statusColor,
                   ),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.chevron_right_rounded,
-                  color: theme.colorScheme.onSurfaceVariant,
-                  size: 20,
-                ),
+                ],
+              ),
+              const SizedBox(width: 8),
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: Colors.grey,
+                size: 20,
               ),
             ],
           ),
@@ -117,32 +98,28 @@ class LoteCard extends StatelessWidget {
   }
 }
 
-class _InfoChip extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final ThemeData theme;
+class _StatusBadge extends StatelessWidget {
+  final String text;
+  final Color color;
 
-  const _InfoChip({
-    required this.icon,
-    required this.label,
-    required this.theme,
-  });
+  const _StatusBadge({required this.text, required this.color});
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 14, color: theme.colorScheme.onSurfaceVariant),
-        const SizedBox(width: 3),
-        Text(
-          label,
-          style: theme.textTheme.labelSmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-          overflow: TextOverflow.ellipsis,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: color,
         ),
-      ],
+      ),
     );
   }
 }
