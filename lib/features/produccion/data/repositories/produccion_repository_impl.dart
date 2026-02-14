@@ -90,6 +90,7 @@ class ProduccionRepositoryImpl implements ProduccionRepository {
     required String cintaNombre,
     required String cintaColorHex,
     required double cantidad,
+    required DateTime fecha,
     required String productoraId,
     required String uidUsuario,
   }) async {
@@ -100,6 +101,7 @@ class ProduccionRepositoryImpl implements ProduccionRepository {
         cintaNombre: cintaNombre,
         cintaColorHex: cintaColorHex,
         cantidad: cantidad,
+        fecha: fecha,
         productoraId: productoraId,
         uidUsuario: uidUsuario,
       );

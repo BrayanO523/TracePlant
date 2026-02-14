@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../app/theme/app_colors.dart';
 import '../../domain/entities/produccion_enums.dart';
 import 'color_cinta_ext.dart';
 
@@ -102,16 +103,16 @@ class EstadoIndicador extends StatelessWidget {
   Color get _backgroundColor {
     if (estadoCiclo != null) {
       return switch (estadoCiclo!) {
-        EstadoCiclo.sembrado => const Color(0xFFF9A825), // Ámbar
-        EstadoCiclo.encintado => const Color(0xFF1E88E5), // Azul
-        EstadoCiclo.cosechado => const Color(0xFF43A047), // Verde
-        EstadoCiclo.cancelado => const Color(0xFFE53935), // Rojo
+        EstadoCiclo.sembrado => AppColors.estadoSembrado,
+        EstadoCiclo.encintado => AppColors.estadoEncintado,
+        EstadoCiclo.cosechado => AppColors.estadoCosechado,
+        EstadoCiclo.cancelado => AppColors.estadoCancelado,
       };
     }
     if (estadoLote != null) {
       return estadoLote == EstadoLote.libre
-          ? const Color(0xFF43A047)
-          : const Color(0xFFF9A825);
+          ? AppColors.estadoCosechado
+          : AppColors.estadoSembrado;
     }
     return Colors.grey;
   }

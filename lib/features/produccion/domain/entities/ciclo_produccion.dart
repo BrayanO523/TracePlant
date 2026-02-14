@@ -47,4 +47,19 @@ class CicloProduccion {
 
   // Helper para suma total encintado
   double get totalEncintado => encintados.fold(0, (sum, e) => sum + e.cantidad);
+
+  /// Fecha del último encintado registrado (null si no hay encintados)
+  DateTime? get ultimoEncintadoFecha {
+    if (encintados.isEmpty) return null;
+    return encintados.reduce((a, b) => a.fecha.isAfter(b.fecha) ? a : b).fecha;
+  }
+
+  /// Proyección de cosecha: último encintado + (semanas × 7 días)
+  /// Retorna null si no hay encintados o ya se cosechó
+  DateTime? proyeccionCosecha(int semanasParaCosecha) {
+    if (fechaCosecha != null) return null; // Ya cosechado
+    final ultima = ultimoEncintadoFecha;
+    if (ultima == null) return null;
+    return ultima.add(Duration(days: semanasParaCosecha * 7));
+  }
 }

@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../app/di/providers.dart';
+import '../../../../app/theme/app_colors.dart';
 import '../viewmodels/produccion_notifier.dart';
 import '../../domain/entities/ciclo_produccion.dart';
 import '../../domain/entities/produccion_enums.dart';
 
 import '../../../administracion/domain/entities/cinta.dart'; // Import Cinta
-import '../widgets/estado_indicador.dart'; // Restore EstadoIndicador
-import '../widgets/ciclo_timeline.dart';
+import '../widgets/estado_indicador.dart';
+import 'ciclo_history_screen.dart';
 
 /// Formulario premium para registrar eventos del ciclo.
 /// Campos dinámicos según el paso: Siembra, Encintado, Cosecha.
@@ -83,7 +84,7 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(next.successMessage!),
-            backgroundColor: const Color(0xFF43A047),
+            backgroundColor: AppColors.estadoCosechado,
           ),
         );
         ref
@@ -106,7 +107,7 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(next.error!),
-            backgroundColor: const Color(0xFFE53935),
+            backgroundColor: AppColors.estadoCancelado,
           ),
         );
         ref
@@ -137,40 +138,10 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
               tooltip: 'Ver Historial del Ciclo',
               icon: const Icon(Icons.history_rounded),
               onPressed: () {
-                showModalBottomSheet(
-                  context: context,
-                  backgroundColor: Colors.transparent,
-                  builder: (_) => Container(
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surface,
-                      borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(20),
-                      ),
-                    ),
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 4,
-                          margin: const EdgeInsets.only(bottom: 20),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.outlineVariant,
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                        Text(
-                          'Historial del Ciclo',
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        CicloTimeline(ciclo: ciclo),
-                        const SizedBox(height: 20),
-                      ],
-                    ),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => CicloHistoryScreen(ciclo: ciclo),
                   ),
                 );
               },
@@ -602,7 +573,6 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
                       color: theme.colorScheme.primaryContainer,
                     ),
                   ),
-                  child: Icon(Icons.bookmark, color: theme.colorScheme.primary),
                 ),
                 title: Text('${item.cintaNombre} · ${item.cantidad} uds'),
                 subtitle: Text(_formatDateDisplay(item.fecha)),
@@ -672,7 +642,7 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          cinta.descripcion,
+                          cinta.color,
                           style: theme.textTheme.bodyMedium?.copyWith(
                             fontWeight: isSelected
                                 ? FontWeight.bold
@@ -742,7 +712,7 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
         icon: const Icon(Icons.agriculture_rounded),
         label: const Text('Finalizar Ciclo / Cosechar'),
         style: FilledButton.styleFrom(
-          backgroundColor: const Color(0xFF43A047), // Green
+          backgroundColor: AppColors.estadoCosechado, // Green
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
@@ -814,17 +784,17 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
       TipoEvento.siembra => (
         'Registrar Siembra',
         Icons.grass_rounded,
-        const Color(0xFFF9A825),
+        AppColors.estadoSembrado,
       ),
       TipoEvento.encintado => (
         'Guardar Encintado',
         Icons.bookmark_rounded,
-        const Color(0xFF1E88E5),
+        AppColors.estadoEncintado,
       ),
       TipoEvento.cosecha => (
         'Registrar Cosecha',
         Icons.agriculture_rounded,
-        const Color(0xFF43A047),
+        AppColors.estadoCosechado,
       ),
     };
 
@@ -865,13 +835,13 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
             width: 72,
             height: 72,
             decoration: BoxDecoration(
-              color: const Color(0xFF43A047).withOpacity(0.1),
+              color: AppColors.estadoCosechado.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
             child: const Icon(
               Icons.check_circle_rounded,
               size: 40,
-              color: Color(0xFF43A047),
+              color: AppColors.estadoCosechado,
             ),
           ),
           const SizedBox(height: 20),
@@ -925,7 +895,7 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Seleccione un color de cinta'),
-              backgroundColor: Color(0xFFE53935),
+              backgroundColor: AppColors.estadoCancelado,
             ),
           );
           return;
@@ -937,7 +907,7 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('La cantidad debe ser mayor a 0'),
-              backgroundColor: Color(0xFFE53935),
+              backgroundColor: AppColors.estadoCancelado,
             ),
           );
           return;
@@ -947,10 +917,10 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
         await notifier.registrarEncintado(
           idCiclo: ciclo.id,
           cintaId: _cintaSeleccionada!.id,
-          cintaNombre:
-              _cintaSeleccionada!.descripcion, // Usamos desc como nombre visual
+          cintaNombre: _cintaSeleccionada!.color,
           cintaColorHex: _cintaSeleccionada!.colorHex,
           cantidad: cantidad,
+          fecha: _fechaSeleccionada,
           uidUsuario: uidUsuario,
         );
       // Si el éxito se maneja en el listener, aquí no hacemos mucho más

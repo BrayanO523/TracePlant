@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../app/theme/app_colors.dart';
 import '../../domain/entities/ciclo_produccion.dart';
 import '../../domain/entities/produccion_enums.dart';
 
@@ -27,7 +28,7 @@ class CicloTimeline extends StatelessWidget {
       _buildStep(
         context,
         icon: Icons.grass_rounded,
-        color: const Color(0xFFF9A825), // Amber
+        color: AppColors.estadoSembrado, // Amber
         title: 'Siembra',
         subtitle: '${ciclo.area.toStringAsFixed(1)} mz · ${ciclo.variedad}',
         date: ciclo.fechaSiembra,
@@ -74,7 +75,7 @@ class CicloTimeline extends StatelessWidget {
             title: 'Encintado',
             subtitle: 'Pendiente',
             isCompleted: false,
-            color: const Color(0xFF1E88E5), // Blue default
+            color: AppColors.estadoEncintado, // Blue default
           ),
         );
       }
@@ -95,7 +96,7 @@ class CicloTimeline extends StatelessWidget {
         _buildStep(
           context,
           icon: Icons.agriculture_rounded,
-          color: const Color(0xFF43A047), // Green
+          color: AppColors.estadoCosechado, // Green
           title: 'Cosecha',
           subtitle: isCosechado && ciclo.cantidadCosecha != null
               ? '${ciclo.cantidadCosecha!.toStringAsFixed(0)} uds · Merma: ${ciclo.merma?.toStringAsFixed(1) ?? "—"}'
@@ -313,10 +314,10 @@ class CicloTimeline extends StatelessWidget {
   }
 
   Color get _estadoColor => switch (ciclo.estado) {
-    EstadoCiclo.sembrado => const Color(0xFFF9A825),
-    EstadoCiclo.encintado => const Color(0xFF1E88E5),
-    EstadoCiclo.cosechado => const Color(0xFF43A047),
-    EstadoCiclo.cancelado => const Color(0xFFE53935),
+    EstadoCiclo.sembrado => AppColors.estadoSembrado,
+    EstadoCiclo.encintado => AppColors.estadoEncintado,
+    EstadoCiclo.cosechado => AppColors.estadoCosechado,
+    EstadoCiclo.cancelado => AppColors.estadoCancelado,
   };
 
   String get _estadoLabel => switch (ciclo.estado) {

@@ -46,13 +46,15 @@ class ProduccionRemoteDatasource {
     return _firestore
         .collection(FirestorePaths.fincas)
         .where('productoraId', isEqualTo: productoraId)
-        .where('activo', isEqualTo: true) // Solo fincas activas
-        .orderBy('nombre')
         .snapshots()
-        .map(
-          (snap) =>
-              snap.docs.map((doc) => FincaModel.fromFirestore(doc)).toList(),
-        );
+        .map((snap) {
+          final list = snap.docs
+              .map((doc) => FincaModel.fromFirestore(doc))
+              .where((f) => f.activo)
+              .toList();
+          list.sort((a, b) => a.nombre.compareTo(b.nombre));
+          return list;
+        });
   }
 
   // ═══════════════════════════════════════════════════════
@@ -154,6 +156,7 @@ class ProduccionRemoteDatasource {
     required String cintaNombre,
     required String cintaColorHex,
     required double cantidad,
+    required DateTime fecha,
     required String productoraId,
     required String uidUsuario,
   }) async {
@@ -172,14 +175,13 @@ class ProduccionRemoteDatasource {
       );
     }
 
-    final now = DateTime.now();
     final nuevoEncintado = {
       'id': _firestore.collection('tmp').doc().id, // ID único generado
       'cinta_id': cintaId,
       'cinta_nombre': cintaNombre,
       'cinta_color_hex': cintaColorHex,
       'cantidad': cantidad,
-      'fecha': now.millisecondsSinceEpoch,
+      'fecha': fecha.millisecondsSinceEpoch,
       'usuario_id': uidUsuario,
     };
 
@@ -314,15 +316,11 @@ class ProduccionRemoteDatasource {
   // ═══════════════════════════════════════════════════════
 
   Future<Map<String, dynamic>> getStatsProductora(String productoraId) async {
-    // Obtenemos todos los ciclos NO cancelados de la productora
-    // Idealmente usaríamos aggregation queries de Firestore, pero para el MVP
-    // leemos y procesamos en cliente (o usamos count() si solo fuera conteo).
-    // Dado que necesitamos sumar volúmenes, leemos los docs.
-    // Si la colección crece mucho, mover esto a Cloud Function o Aggregation.
+    // Obtenemos todos los ciclos de esta productora con una sola condición.
+    // Filtramos cancelados en cliente para NO requerir índice compuesto.
 
     final snap = await _ciclosRef()
         .where('id_productora', isEqualTo: productoraId)
-        .where('estado', isNotEqualTo: EstadoCiclo.cancelado.name)
         .get();
 
     int ciclosActivos = 0;
@@ -334,7 +332,10 @@ class ProduccionRemoteDatasource {
     for (final doc in snap.docs) {
       final ciclo = CicloProduccionModel.fromFirestore(doc);
 
-      // Contar ciclos activos (no cosechados y no cancelados)
+      // Saltar ciclos cancelados (filtro client-side)
+      if (ciclo.estado == EstadoCiclo.cancelado) continue;
+
+      // Contar ciclos activos (sembrado + encintado, no cosechado)
       if (ciclo.estado != EstadoCiclo.cosechado) {
         ciclosActivos++;
         lotesIds.add(ciclo.idLote);

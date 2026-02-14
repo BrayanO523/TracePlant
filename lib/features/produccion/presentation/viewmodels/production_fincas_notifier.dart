@@ -69,11 +69,12 @@ class ProductionFincasNotifier extends StateNotifier<ProductionFincasState> {
 }
 
 // Provider
-final productionFincasProvider = StateNotifierProvider.autoDispose
-    .family<ProductionFincasNotifier, ProductionFincasState, String>((
-      ref,
-      productoraId,
-    ) {
+final productionFincasProvider =
+    StateNotifierProvider.family<
+      ProductionFincasNotifier,
+      ProductionFincasState,
+      String
+    >((ref, productoraId) {
       return ProductionFincasNotifier(
         ref.read(produccionRepositoryProvider),
         productoraId,

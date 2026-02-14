@@ -166,6 +166,7 @@ class ProduccionNotifier extends StateNotifier<ProduccionState> {
     required String cintaNombre,
     required String cintaColorHex,
     required double cantidad,
+    required DateTime fecha,
     required String uidUsuario,
   }) async {
     state = state.copyWith(
@@ -188,6 +189,7 @@ class ProduccionNotifier extends StateNotifier<ProduccionState> {
       cintaNombre: cintaNombre,
       cintaColorHex: cintaColorHex,
       cantidad: cantidad,
+      fecha: fecha,
       productoraId: productoraId,
       uidUsuario: uidUsuario,
     );

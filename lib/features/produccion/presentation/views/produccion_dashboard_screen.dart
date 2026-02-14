@@ -1,12 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../app/di/providers.dart';
+import '../../../../app/theme/app_colors.dart';
 import 'produccion_fincas_screen.dart';
 
 class ProduccionDashboardScreen extends ConsumerStatefulWidget {
   final String productoraId;
+  final bool readOnly;
 
-  const ProduccionDashboardScreen({super.key, required this.productoraId});
+  const ProduccionDashboardScreen({
+    super.key,
+    required this.productoraId,
+    this.readOnly = false,
+  });
 
   @override
   ConsumerState<ProduccionDashboardScreen> createState() =>
@@ -35,7 +41,6 @@ class _ProduccionDashboardScreenState
     if (mounted) {
       result.fold(
         (failure) {
-          // Handle error silently or show snackbar
           setState(() => _loading = false);
         },
         (stats) {
@@ -56,7 +61,7 @@ class _ProduccionDashboardScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor: AppColors.background,
       appBar: AppBar(title: const Text('Producción'), centerTitle: true),
       body: Column(
         children: [
@@ -97,7 +102,7 @@ class _ProduccionDashboardScreenState
                 height: 60,
                 child: ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF1E88E5),
+                    backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
@@ -110,14 +115,18 @@ class _ProduccionDashboardScreenState
                       MaterialPageRoute(
                         builder: (_) => ProduccionFincasScreen(
                           productoraId: widget.productoraId,
+                          readOnly: widget.readOnly,
                         ),
                       ),
                     );
                   },
                   icon: const Icon(Icons.terrain_rounded, size: 28),
-                  label: const Text(
-                    'MIS FINCAS',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  label: Text(
+                    widget.readOnly ? 'VER FINCAS' : 'MIS FINCAS',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ),
@@ -154,28 +163,28 @@ class _StatsGrid extends StatelessWidget {
             _StatCard(
               width: itemWidth,
               icon: Icons.loop_rounded,
-              color: Colors.blue,
+              color: AppColors.info,
               label: 'Ciclos Activos',
               value: stats['ciclosActivos'].toString(),
             ),
             _StatCard(
               width: itemWidth,
               icon: Icons.grid_on_rounded,
-              color: Colors.orange,
+              color: AppColors.secondary,
               label: 'Lotes Activos',
               value: stats['lotesActivos'].toString(),
             ),
             _StatCard(
               width: itemWidth,
               icon: Icons.agriculture_rounded,
-              color: Colors.green,
+              color: AppColors.primary,
               label: 'Cosecha Total',
               value: '${stats['volumenCosecha'].toStringAsFixed(1)} un',
             ),
             _StatCard(
               width: itemWidth,
               icon: Icons.bookmark_rounded,
-              color: Colors.purple,
+              color: AppColors.accent,
               label: 'En Cinta',
               value: '${stats['volumenEncintado'].toStringAsFixed(1)} un',
             ),
@@ -209,7 +218,7 @@ class _StatCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.withOpacity(0.1)),
+        border: Border.all(color: AppColors.borderLight),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.02),
@@ -235,15 +244,15 @@ class _StatCard extends StatelessWidget {
             style: const TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF2D3436),
+              color: AppColors.textPrimary,
             ),
           ),
           const SizedBox(height: 4),
           Text(
             label,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 14,
-              color: Colors.grey[600],
+              color: AppColors.textSecondary,
               fontWeight: FontWeight.w500,
             ),
           ),

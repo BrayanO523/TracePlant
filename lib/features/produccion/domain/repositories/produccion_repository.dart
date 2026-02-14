@@ -34,6 +34,7 @@ abstract class ProduccionRepository {
     required String cintaNombre,
     required String cintaColorHex,
     required double cantidad,
+    required DateTime fecha,
     required String productoraId,
     required String uidUsuario,
   });
