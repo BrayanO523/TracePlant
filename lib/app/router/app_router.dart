@@ -9,6 +9,7 @@ import '../../../features/auth/presentation/views/login_screen.dart';
 import '../../../features/auth/presentation/views/register_screen.dart';
 import '../../../features/asignaciones/presentation/views/admin_home_screen.dart';
 import '../../../features/produccion/presentation/views/produccion_dashboard_screen.dart';
+import '../../../features/produccion/presentation/consultas/views/consultas_screen.dart';
 import '../../../features/empacadora/presentation/views/empacadora_home_screen.dart';
 
 // Placeholders are defined at the bottom of this file
@@ -69,6 +70,16 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           final productoraId = user?.companyId ?? '';
           return ProduccionDashboardScreen(productoraId: productoraId);
         },
+        routes: [
+          GoRoute(
+            path: 'consultas',
+            builder: (context, state) {
+              final user = userState.asData?.value;
+              final productoraId = user?.companyId ?? '';
+              return ConsultasScreen(productoraId: productoraId);
+            },
+          ),
+        ],
       ),
       GoRoute(
         path: '/empacadora',
