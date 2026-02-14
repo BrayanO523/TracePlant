@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../app/theme/app_colors.dart';
 import '../../domain/entities/lote.dart';
 import '../../domain/entities/produccion_enums.dart';
 import 'estado_indicador.dart';
@@ -15,8 +16,8 @@ class LoteCard extends StatelessWidget {
     final theme = Theme.of(context);
     final isOcupado = lote.estado == EstadoLote.ocupado;
     final accentColor = isOcupado
-        ? const Color(0xFFF9A825)
-        : const Color(0xFF43A047);
+        ? AppColors.estadoSembrado
+        : AppColors.estadoCosechado;
 
     return Card(
       elevation: 0,
