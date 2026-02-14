@@ -1,17 +1,21 @@
 import 'package:flutter/material.dart';
+import '../../../../app/theme/app_colors.dart';
 import '../viewmodels/asignaciones_notifier.dart';
 
 /// Mapa de Relaciones — vista resumida de qué productoras pertenecen
 /// a cada empacadora.
 ///
 /// Usa ExpansionTiles agrupadas por Empacadora, con opción de desasignar.
+/// Soporta búsqueda por nombre de empacadora o productora.
 class RelacionesMap extends StatelessWidget {
   final AsignacionesState state;
+  final String searchQuery;
   final void Function(String idAsignacion) onDesasignar;
 
   const RelacionesMap({
     super.key,
     required this.state,
+    this.searchQuery = '',
     required this.onDesasignar,
   });
 
@@ -52,15 +56,61 @@ class RelacionesMap extends StatelessWidget {
       );
     }
 
+    // Filtrar por búsqueda
+    final query = searchQuery.toLowerCase();
+    final filteredEntries = mapa.entries.where((entry) {
+      if (query.isEmpty) return true;
+      final empMatch = entry.key.name.toLowerCase().contains(query);
+      final prodMatch = entry.value.any(
+        (a) => a.nombreProductora.toLowerCase().contains(query),
+      );
+      return empMatch || prodMatch;
+    }).toList();
+
+    if (filteredEntries.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.search_off_rounded,
+              size: 48,
+              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No se encontraron resultados para "$searchQuery"',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return RefreshIndicator(
       onRefresh: () async {},
       child: ListView.builder(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 80),
-        itemCount: mapa.length,
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 80),
+        itemCount: filteredEntries.length,
         itemBuilder: (context, index) {
-          final entry = mapa.entries.elementAt(index);
+          final entry = filteredEntries[index];
           final empacadora = entry.key;
           final asignaciones = entry.value;
+
+          // Si buscamos una productora específica, filtrar dentro también
+          final filteredAsignaciones = query.isEmpty
+              ? asignaciones
+              : asignaciones
+                    .where(
+                      (a) =>
+                          a.nombreProductora.toLowerCase().contains(query) ||
+                          empacadora.name.toLowerCase().contains(query),
+                    )
+                    .toList();
+
           final count = asignaciones.length;
 
           return Padding(
@@ -91,11 +141,24 @@ class RelacionesMap extends StatelessWidget {
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                subtitle: Text(
-                  '$count productora(s) asignada(s)',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '$count productora(s) asignada(s)',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    if (empacadora.location != null)
+                      Text(
+                        empacadora.location!,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: theme.colorScheme.outline,
+                          fontSize: 10,
+                        ),
+                      ),
+                  ],
                 ),
                 trailing: Container(
                   padding: const EdgeInsets.symmetric(
@@ -114,9 +177,9 @@ class RelacionesMap extends StatelessWidget {
                     ),
                   ),
                 ),
-                initiallyExpanded: index == 0,
+                initiallyExpanded: query.isNotEmpty || index == 0,
                 children: [
-                  if (asignaciones.isEmpty)
+                  if (filteredAsignaciones.isEmpty)
                     Padding(
                       padding: const EdgeInsets.all(16),
                       child: Text(
@@ -129,17 +192,17 @@ class RelacionesMap extends StatelessWidget {
                       ),
                     )
                   else
-                    ...asignaciones.map(
+                    ...filteredAsignaciones.map(
                       (a) => ListTile(
                         leading: CircleAvatar(
                           radius: 16,
-                          backgroundColor: const Color(
-                            0xFF43A047,
-                          ).withValues(alpha: 0.12),
+                          backgroundColor: AppColors.estadoCosechado.withValues(
+                            alpha: 0.12,
+                          ),
                           child: const Icon(
                             Icons.agriculture_rounded,
                             size: 16,
-                            color: Color(0xFF43A047),
+                            color: AppColors.estadoCosechado,
                           ),
                         ),
                         title: Text(
@@ -175,10 +238,10 @@ class RelacionesMap extends StatelessWidget {
   }
 
   Color _countColor(int count) {
-    if (count == 0) return const Color(0xFF9E9E9E);
-    if (count <= 3) return const Color(0xFF43A047);
-    if (count <= 6) return const Color(0xFFFB8C00);
-    return const Color(0xFFE53935);
+    if (count == 0) return AppColors.textHint;
+    if (count <= 3) return AppColors.estadoCosechado;
+    if (count <= 6) return AppColors.warning;
+    return AppColors.estadoCancelado;
   }
 
   String _formatDate(DateTime date) {

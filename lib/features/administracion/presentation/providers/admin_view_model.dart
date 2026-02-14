@@ -82,8 +82,8 @@ class AdminViewModel extends StateNotifier<AsyncValue<void>> {
     required String fincaId,
     required String nombre,
     required double area,
-    required String variedadId,
-    required String variedadNombre,
+    String? variedadId,
+    String? variedadNombre,
   }) async {
     state = const AsyncValue.loading();
     try {
@@ -109,6 +109,7 @@ class AdminViewModel extends StateNotifier<AsyncValue<void>> {
         productoraId: _currentUserId,
         estado: 'produccion',
       );
+
       await ref.read(administracionRepositoryProvider).saveLote(lote);
 
       // 3. Update Finca Area (Aggregation)

@@ -14,4 +14,7 @@ abstract class EmpacadoraRepository {
   Stream<List<CicloProduccion>> watchCiclosDeProductoras(
     List<String> idsProductoras,
   );
+
+  /// Retorna un mapa loteId → nombreFinca para los lotes de las productoras.
+  Future<Map<String, String>> fetchLoteFincaMap(List<String> idsProductoras);
 }

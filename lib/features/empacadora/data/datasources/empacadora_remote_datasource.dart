@@ -2,7 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../../core/constants/firestore_paths.dart';
 import '../../../produccion/data/models/ciclo_produccion_model.dart';
 import '../../../productora/data/models/productora_model.dart';
-import '../../../produccion/domain/entities/produccion_enums.dart';
 
 /// Datasource remoto para el módulo de Empacadora.
 ///
@@ -80,69 +79,80 @@ class EmpacadoraRemoteDatasource {
   ) {
     if (idsProductoras.isEmpty) return Stream.value([]);
 
-    // Limitación Firestore: whereIn max 10.
-    // Si hay > 10, necesitaríamos merge de streams.
-    // MVP: Tomamos los primeros 10 o implementamos merge.
-    // Aquí implementamos merge manual de streams para soporte robusto.
-
-    final List<Stream<List<CicloProduccionModel>>> streams = [];
-
-    for (var i = 0; i < idsProductoras.length; i += 10) {
-      final chunk = idsProductoras.sublist(
-        i,
-        i + 10 > idsProductoras.length ? idsProductoras.length : i + 10,
-      );
-
-      // Solo nos interesan ciclos activos (abierto o encintado) para proyección
-      final stream = _firestore
-          .collection('ciclos_produccion')
-          .where('id_productora', whereIn: chunk)
-          // Opcional: filtrar por estado para optimizar ancho de banda
-          //.where('estado', whereIn: ['abierto', 'encintado'])
-          .orderBy('fecha_apertura', descending: true)
-          .snapshots()
-          .map(
-            (snap) => snap.docs
-                .map((doc) => CicloProduccionModel.fromFirestore(doc))
-                .toList(),
-          );
-
-      streams.add(stream);
-    }
-
-    // Combinar streams (simple merge, asumiendo rxdart o manual)
-    // Usaremos una implementación manual simple con async generator o StreamGroup
-    // si tuvieramos la librería. Como es vanilla dart streams standard:
-    // Retornamos el del primer chunk por simplicidad MVP o usamos un método helper.
-    // Para simplificar sin RxDart, si son pocos, usaremos solo el primer chunk
-    // y un TODO: escalar. Pero dado el requerimiento "Premium", haré algo mejor.
-    // Voy a asumir < 10 para este sprint inicial para garantizar estabilidad,
-    // ya que Streams combinados nativos son complejos sin RxDart.
-
-    if (idsProductoras.length > 10) {
-      // Fallback seguro: solo primeros 10
-      final chunk = idsProductoras.sublist(0, 10);
-      return _firestore
-          .collection('ciclos_produccion')
-          .where('id_productora', whereIn: chunk)
-          .orderBy('fecha_apertura', descending: true)
-          .snapshots()
-          .map(
-            (snap) => snap.docs
-                .map((d) => CicloProduccionModel.fromFirestore(d))
-                .toList(),
-          );
-    }
+    // Firestore limita whereIn a 10 elementos.
+    // Para > 10, se necesita merge de streams (fuera de alcance MVP).
+    // Fallback: tomar los primeros 10.
+    final ids = idsProductoras.length > 10
+        ? idsProductoras.sublist(0, 10)
+        : idsProductoras;
 
     return _firestore
-        .collection('ciclos_produccion')
-        .where('id_productora', whereIn: idsProductoras)
-        .orderBy('fecha_apertura', descending: true)
+        .collection(FirestorePaths.ciclosProduccion)
+        .where('id_productora', whereIn: ids)
         .snapshots()
         .map(
           (snap) => snap.docs
               .map((doc) => CicloProduccionModel.fromFirestore(doc))
               .toList(),
         );
+  }
+
+  /// Retorna un mapa loteId → nombreFinca para los lotes
+  /// de las productoras indicadas.
+  Future<Map<String, String>> fetchLoteFincaMap(
+    List<String> idsProductoras,
+  ) async {
+    if (idsProductoras.isEmpty) return {};
+
+    // 1. Obtener todos los lotes de las productoras
+    final lotes = <Map<String, dynamic>>[];
+    for (var i = 0; i < idsProductoras.length; i += 10) {
+      final chunk = idsProductoras.sublist(
+        i,
+        i + 10 > idsProductoras.length ? idsProductoras.length : i + 10,
+      );
+      final snap = await _firestore
+          .collection(FirestorePaths.lotes)
+          .where('productoraId', whereIn: chunk)
+          .get();
+      for (var doc in snap.docs) {
+        final data = doc.data();
+        data['_id'] = doc.id;
+        lotes.add(data);
+      }
+    }
+
+    // 2. Obtener IDs únicos de fincas
+    final fincaIds = lotes
+        .map((l) => l['fincaId'] as String? ?? '')
+        .where((id) => id.isNotEmpty)
+        .toSet()
+        .toList();
+
+    // 3. Obtener nombres de fincas
+    final fincaNames = <String, String>{};
+    for (var i = 0; i < fincaIds.length; i += 10) {
+      final chunk = fincaIds.sublist(
+        i,
+        i + 10 > fincaIds.length ? fincaIds.length : i + 10,
+      );
+      final snap = await _firestore
+          .collection(FirestorePaths.fincas)
+          .where(FieldPath.documentId, whereIn: chunk)
+          .get();
+      for (var doc in snap.docs) {
+        fincaNames[doc.id] = (doc.data()['nombre'] as String?) ?? '';
+      }
+    }
+
+    // 4. Construir mapa loteId → nombreFinca
+    final result = <String, String>{};
+    for (var lote in lotes) {
+      final loteId = lote['_id'] as String;
+      final fincaId = lote['fincaId'] as String? ?? '';
+      result[loteId] = fincaNames[fincaId] ?? '';
+    }
+
+    return result;
   }
 }

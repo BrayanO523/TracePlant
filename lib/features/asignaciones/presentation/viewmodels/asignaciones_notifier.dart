@@ -4,7 +4,6 @@ import 'package:equatable/equatable.dart';
 import '../../../../core/errors/result.dart';
 import '../../../productora/domain/entities/productora.dart';
 import '../../../empacadora/domain/entities/empacadora.dart';
-import '../../../produccion/domain/entities/lote.dart';
 import '../../domain/entities/asignacion.dart';
 import '../../domain/repositories/asignaciones_repository.dart';
 
@@ -16,8 +15,6 @@ class AsignacionesState extends Equatable {
   final List<Asignacion> asignaciones;
   final List<Productora> productorasDisponibles;
   final List<Empacadora> empacadoras;
-  final Map<String, int> cargaTrabajo;
-  final Map<String, List<Lote>> lotesPorProductora;
   final bool isLoading;
   final String? error;
   final String? successMessage;
@@ -26,8 +23,6 @@ class AsignacionesState extends Equatable {
     this.asignaciones = const [],
     this.productorasDisponibles = const [],
     this.empacadoras = const [],
-    this.cargaTrabajo = const {},
-    this.lotesPorProductora = const {},
     this.isLoading = false,
     this.error,
     this.successMessage,
@@ -37,8 +32,6 @@ class AsignacionesState extends Equatable {
     List<Asignacion>? asignaciones,
     List<Productora>? productorasDisponibles,
     List<Empacadora>? empacadoras,
-    Map<String, int>? cargaTrabajo,
-    Map<String, List<Lote>>? lotesPorProductora,
     bool? isLoading,
     String? error,
     String? successMessage,
@@ -48,12 +41,22 @@ class AsignacionesState extends Equatable {
       productorasDisponibles:
           productorasDisponibles ?? this.productorasDisponibles,
       empacadoras: empacadoras ?? this.empacadoras,
-      cargaTrabajo: cargaTrabajo ?? this.cargaTrabajo,
-      lotesPorProductora: lotesPorProductora ?? this.lotesPorProductora,
       isLoading: isLoading ?? this.isLoading,
       error: error,
       successMessage: successMessage,
     );
+  }
+
+  // ── Datos derivados (sin queries extra) ──
+
+  /// Carga de trabajo: empacadoraId → cantidad de productoras asignadas.
+  /// Derivado del stream de asignaciones activas.
+  Map<String, int> get cargaTrabajo {
+    final carga = <String, int>{};
+    for (final a in asignaciones) {
+      carga[a.idEmpacadora] = (carga[a.idEmpacadora] ?? 0) + 1;
+    }
+    return carga;
   }
 
   /// Asignaciones activas agrupadas por empacadora (para Mapa de Relaciones).
@@ -70,13 +73,14 @@ class AsignacionesState extends Equatable {
     return result;
   }
 
+  /// Total de asignaciones activas.
+  int get totalAsignaciones => asignaciones.length;
+
   @override
   List<Object?> get props => [
     asignaciones,
     productorasDisponibles,
     empacadoras,
-    cargaTrabajo,
-    lotesPorProductora,
     isLoading,
     error,
     successMessage,
@@ -110,50 +114,36 @@ class AsignacionesNotifier extends StateNotifier<AsignacionesState> {
       },
     );
 
-    // Cargar datos estáticos (empacadoras, productoras disponibles, carga)
+    // Cargar datos estáticos (empacadoras, productoras disponibles)
     _loadStaticData();
   }
 
-  /// Carga empacadoras activas, productoras disponibles y carga de trabajo.
+  /// Carga empacadoras activas y productoras disponibles.
+  /// CargaTrabajo se deriva automáticamente del stream de asignaciones.
   Future<void> _loadStaticData() async {
     try {
       final results = await Future.wait([
         _repository.getEmpacadorasActivas(),
         _repository.getProductorasDisponibles(),
-        _repository.getCargaTrabajo(),
       ]);
-
-      final productoras = results[1] as List<Productora>;
-
-      // Cargar lotes de estas productoras
-      // Esto podría hacerse en paralelo con lo anterior si tuvieramos los IDs antes,
-      // pero requerimos la lista primeros.
-      Map<String, List<Lote>> lotes = {};
-      if (productoras.isNotEmpty) {
-        lotes = await _repository.getLotesDeProductoras(
-          productoras.map((p) => p.id).toList(),
-        );
-      }
 
       state = state.copyWith(
         empacadoras: results[0] as List<Empacadora>,
-        productorasDisponibles: productoras,
-        cargaTrabajo: results[2] as Map<String, int>,
-        lotesPorProductora: lotes,
+        productorasDisponibles: results[1] as List<Productora>,
       );
     } catch (e) {
       state = state.copyWith(error: 'Error al cargar datos: $e');
     }
   }
 
-  /// Recarga todos los datos (empacadoras, productoras, carga).
+  /// Recarga todos los datos (empacadoras, productoras).
   Future<void> refresh() async {
     state = state.copyWith(isLoading: true);
     await _loadStaticData();
     state = state.copyWith(isLoading: false);
   }
 
-  /// Asigna múltiples productoras a una empacadora.
+  /// Asigna múltiples productoras a una empacadora (1 empacadora ← N productoras).
   Future<void> asignarBatch({
     required String idEmpacadora,
     required List<String> idsProductoras,
@@ -167,7 +157,7 @@ class AsignacionesNotifier extends StateNotifier<AsignacionesState> {
 
     switch (result) {
       case Success():
-        // Recargar datos para reflejar cambios
+        // Recargar productoras disponibles (las asignadas ya no deben aparecer)
         await _loadStaticData();
         state = state.copyWith(
           isLoading: false,

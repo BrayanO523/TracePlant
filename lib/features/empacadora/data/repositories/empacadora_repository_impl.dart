@@ -26,4 +26,9 @@ class EmpacadoraRepositoryImpl implements EmpacadoraRepository {
   ) {
     return _datasource.watchCiclosDeProductoras(idsProductoras);
   }
+
+  @override
+  Future<Map<String, String>> fetchLoteFincaMap(List<String> idsProductoras) {
+    return _datasource.fetchLoteFincaMap(idsProductoras);
+  }
 }

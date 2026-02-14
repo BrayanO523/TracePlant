@@ -72,10 +72,16 @@ class _ProductoraStatsCardState extends ConsumerState<ProductoraStatsCard> {
               ),
             ),
             subtitle: Text(
-              widget.productora.location ?? 'Sin ubicación',
+              [
+                widget.productora.location ?? 'Sin ubicación',
+                if (widget.productora.rnt != null)
+                  'RNT: ${widget.productora.rnt}',
+              ].join(' • '),
               style: theme.textTheme.bodySmall?.copyWith(
                 color: colorScheme.onSurfaceVariant,
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
@@ -131,8 +137,7 @@ class _ProductoraStatsCardState extends ConsumerState<ProductoraStatsCard> {
   }
 
   Widget _buildStatsPanel(BuildContext context) {
-    // Aquí es donde la "magia" ocurre: solo leemos el provider si estamos expandidos.
-    // Aquí es donde la "magia" ocurre: solo leemos el provider si estamos expandidos.
+    // id_productora en ciclos usa el ID del documento de la productora.
     final statsAsync = ref.watch(productoraStatsProvider(widget.productora.id));
     final theme = Theme.of(context);
 
@@ -174,11 +179,13 @@ class _ProductoraStatsCardState extends ConsumerState<ProductoraStatsCard> {
               ),
             ),
             data: (stats) {
-              if (stats.ciclosActivos == 0) {
+              if (stats.ciclosActivos == 0 && stats.lotesActivos == 0) {
                 return _buildEmptyStats(theme);
               }
-              return Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
+              return Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                alignment: WrapAlignment.spaceAround,
                 children: [
                   _buildStatItem(
                     theme,
@@ -186,6 +193,13 @@ class _ProductoraStatsCardState extends ConsumerState<ProductoraStatsCard> {
                     value: stats.ciclosActivos.toString(),
                     icon: Icons.loop_rounded,
                     color: Colors.blue,
+                  ),
+                  _buildStatItem(
+                    theme,
+                    label: 'Lotes',
+                    value: stats.lotesActivos.toString(),
+                    icon: Icons.grass_rounded,
+                    color: Colors.teal,
                   ),
                   _buildStatItem(
                     theme,

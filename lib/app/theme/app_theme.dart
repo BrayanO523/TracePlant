@@ -1,28 +1,24 @@
 import 'package:flutter/material.dart';
+import 'app_colors.dart';
 
 /// Tema premium agrícola con Material 3.
-/// Paleta: Esmeralda (primario), Ámbar (secundario), Tierra (terciario).
+/// Usa [AppColors] como fuente única de colores.
 class AppTheme {
   AppTheme._();
-
-  // ── Colores base ──────────────────────────────────────
-  static const _seedGreen = Color(0xFF2E7D32); // Esmeralda
-  static const _seedAmbar = Color(0xFFF9A825); // Ámbar cosecha
-  static const _seedTierra = Color(0xFF6D4C41); // Tierra
 
   // ── Light Theme ───────────────────────────────────────
   static ThemeData get lightTheme {
     final colorScheme = ColorScheme.fromSeed(
-      seedColor: _seedGreen,
-      secondary: _seedAmbar,
-      tertiary: _seedTierra,
+      seedColor: AppColors.primary,
+      secondary: AppColors.secondary,
+      tertiary: AppColors.tertiary,
       brightness: Brightness.light,
     );
 
     return ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
-      scaffoldBackgroundColor: const Color(0xFFF5F7F0),
+      scaffoldBackgroundColor: AppColors.background,
 
       // ── AppBar ──
       appBarTheme: AppBarTheme(
@@ -30,12 +26,11 @@ class AppTheme {
         elevation: 0,
         scrolledUnderElevation: 2,
         backgroundColor: colorScheme.surface,
-        foregroundColor: colorScheme.onSurface,
-        titleTextStyle: TextStyle(
-          fontFamily: 'Inter',
+        foregroundColor: AppColors.textPrimary,
+        titleTextStyle: const TextStyle(
           fontSize: 22,
           fontWeight: FontWeight.w700,
-          color: colorScheme.onSurface,
+          color: AppColors.textPrimary,
           letterSpacing: -0.3,
         ),
       ),
@@ -45,55 +40,48 @@ class AppTheme {
         elevation: 0,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         clipBehavior: Clip.antiAlias,
-        color: colorScheme.surface,
+        color: AppColors.surface,
         surfaceTintColor: Colors.transparent,
       ),
 
       // ── Inputs ──
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: colorScheme.surfaceContainerLowest,
+        fillColor: AppColors.inputFill,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 16,
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: colorScheme.outlineVariant),
+          borderSide: const BorderSide(color: AppColors.border),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.5),
-          ),
+          borderSide: BorderSide(color: AppColors.border.withOpacity(0.5)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: colorScheme.primary, width: 2),
+          borderSide: const BorderSide(color: AppColors.primary, width: 2),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: colorScheme.error),
+          borderSide: const BorderSide(color: AppColors.error),
         ),
-        labelStyle: TextStyle(
-          fontFamily: 'Inter',
-          color: colorScheme.onSurfaceVariant,
-        ),
-        hintStyle: TextStyle(
-          fontFamily: 'Inter',
-          color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-        ),
+        labelStyle: const TextStyle(color: AppColors.textSecondary),
+        hintStyle: TextStyle(color: AppColors.textHint.withOpacity(0.7)),
       ),
 
       // ── Botones ──
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
           textStyle: const TextStyle(
-            fontFamily: 'Inter',
             fontSize: 16,
             fontWeight: FontWeight.w600,
             letterSpacing: 0.2,
@@ -101,26 +89,43 @@ class AppTheme {
         ),
       ),
 
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
+      ),
+
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.primary,
+          side: const BorderSide(color: AppColors.primary),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
+      ),
+
       // ── FAB ──
       floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: colorScheme.primary,
-        foregroundColor: colorScheme.onPrimary,
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
         elevation: 4,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
 
       // ── TabBar ──
-      tabBarTheme: TabBarThemeData(
-        labelColor: colorScheme.primary,
-        unselectedLabelColor: colorScheme.onSurfaceVariant,
-        indicatorColor: colorScheme.primary,
-        labelStyle: const TextStyle(
-          fontFamily: 'Inter',
-          fontWeight: FontWeight.w600,
-          fontSize: 14,
-        ),
-        unselectedLabelStyle: const TextStyle(
-          fontFamily: 'Inter',
+      tabBarTheme: const TabBarThemeData(
+        labelColor: AppColors.primary,
+        unselectedLabelColor: AppColors.textSecondary,
+        indicatorColor: AppColors.primary,
+        labelStyle: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+        unselectedLabelStyle: TextStyle(
           fontWeight: FontWeight.w400,
           fontSize: 14,
         ),
@@ -132,66 +137,28 @@ class AppTheme {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
 
-      // ── Tipografía ──
-      textTheme: const TextTheme(
-        displayLarge: TextStyle(
-          fontFamily: 'Inter',
-          fontWeight: FontWeight.w800,
-        ),
-        displayMedium: TextStyle(
-          fontFamily: 'Inter',
-          fontWeight: FontWeight.w700,
-        ),
-        displaySmall: TextStyle(
-          fontFamily: 'Inter',
-          fontWeight: FontWeight.w600,
-        ),
-        headlineLarge: TextStyle(
-          fontFamily: 'Inter',
-          fontWeight: FontWeight.w700,
-        ),
-        headlineMedium: TextStyle(
-          fontFamily: 'Inter',
-          fontWeight: FontWeight.w600,
-        ),
-        headlineSmall: TextStyle(
-          fontFamily: 'Inter',
-          fontWeight: FontWeight.w600,
-        ),
-        titleLarge: TextStyle(
-          fontFamily: 'Inter',
-          fontWeight: FontWeight.w700,
-          letterSpacing: -0.3,
-        ),
-        titleMedium: TextStyle(
-          fontFamily: 'Inter',
-          fontWeight: FontWeight.w600,
-        ),
-        titleSmall: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w500),
-        bodyLarge: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w400),
-        bodyMedium: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w400),
-        bodySmall: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w400),
-        labelLarge: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600),
-        labelMedium: TextStyle(
-          fontFamily: 'Inter',
-          fontWeight: FontWeight.w500,
-        ),
-        labelSmall: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w500),
-      ),
-
       // ── Divider ──
-      dividerTheme: DividerThemeData(
-        color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+      dividerTheme: const DividerThemeData(
+        color: AppColors.divider,
         thickness: 1,
       ),
 
       // ── Chip ──
       chipTheme: ChipThemeData(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        labelStyle: const TextStyle(
-          fontFamily: 'Inter',
-          fontWeight: FontWeight.w500,
+        labelStyle: const TextStyle(fontWeight: FontWeight.w500),
+      ),
+
+      // ── BottomSheet ──
+      bottomSheetTheme: const BottomSheetThemeData(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
+      ),
+
+      // ── Dialog ──
+      dialogTheme: DialogThemeData(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
     );
   }
@@ -199,20 +166,19 @@ class AppTheme {
   // ── Dark Theme ────────────────────────────────────────
   static ThemeData get darkTheme {
     final colorScheme = ColorScheme.fromSeed(
-      seedColor: _seedGreen,
-      secondary: _seedAmbar,
-      tertiary: _seedTierra,
+      seedColor: AppColors.primary,
+      secondary: AppColors.secondary,
+      tertiary: AppColors.tertiary,
       brightness: Brightness.dark,
     );
 
     return lightTheme.copyWith(
       colorScheme: colorScheme,
-      scaffoldBackgroundColor: const Color(0xFF121A12),
+      scaffoldBackgroundColor: AppColors.darkBackground,
       appBarTheme: lightTheme.appBarTheme.copyWith(
         backgroundColor: colorScheme.surface,
         foregroundColor: colorScheme.onSurface,
         titleTextStyle: TextStyle(
-          fontFamily: 'Inter',
           fontSize: 22,
           fontWeight: FontWeight.w700,
           color: colorScheme.onSurface,

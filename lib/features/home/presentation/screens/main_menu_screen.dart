@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../app/theme/app_colors.dart';
+import '../../../auth/presentation/views/auth_gate.dart';
 import '../../../administracion/presentation/screens/admin_dashboard_screen.dart';
-import '../../../auth/presentation/views/login_screen.dart';
 import '../../../produccion/presentation/views/produccion_dashboard_screen.dart';
+import '../../../produccion/presentation/consultas/views/consultas_screen.dart';
+import '../../../productora/presentation/views/productora_settings_screen.dart';
 import '../../../../app/di/providers.dart';
 
 class MainMenuScreen extends ConsumerWidget {
@@ -11,76 +14,183 @@ class MainMenuScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Menú Principal'),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: 'Cerrar Sesión',
-            onPressed: () async {
-              await ref.read(authNotifierProvider.notifier).signOut();
-              if (context.mounted) {
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (_) => const LoginScreen()),
-                  (route) => false,
-                );
-              }
-            },
-          ),
-        ],
-      ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
+      body: Container(
+        decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
+        child: SafeArea(
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _MenuButton(
-                icon: Icons.admin_panel_settings,
-                label: 'Administración',
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const AdminDashboardScreen(),
+              // --- Header ---
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'TracePlant',
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          'Menú Principal',
+                          style: TextStyle(fontSize: 14, color: Colors.white70),
+                        ),
+                      ],
                     ),
-                  );
-                },
-                color: Colors.blueAccent,
-              ),
-              const SizedBox(height: 20),
-              _MenuButton(
-                icon: Icons.factory,
-                label: 'Producción',
-                onPressed: () {
-                  final user = ref.read(authStateStreamProvider).value;
-                  if (user != null) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            ProduccionDashboardScreen(productoraId: user.uid),
+                    IconButton(
+                      icon: const Icon(
+                        Icons.settings_rounded,
+                        color: Colors.white70,
                       ),
-                    );
-                  }
-                },
-                color: Colors.green,
-              ),
-              const SizedBox(height: 20),
-              _MenuButton(
-                icon: Icons.search,
-                label: 'Consultas',
-                onPressed: () {
-                  // TODO: Navigate to Queries
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Módulo de Consultas próximamente'),
+                      tooltip: 'Ajustes de Empresa',
+                      onPressed: () {
+                        final appUser = ref
+                            .read(currentUserStreamProvider)
+                            .value;
+                        final productoraId = appUser?.companyId;
+                        if (productoraId != null && productoraId.isNotEmpty) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ProductoraSettingsScreen(
+                                productoraId: productoraId,
+                              ),
+                            ),
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Error: No se encontró la empresa'),
+                            ),
+                          );
+                        }
+                      },
                     ),
-                  );
-                },
-                color: Colors.orange,
+                    IconButton(
+                      icon: const Icon(
+                        Icons.logout_rounded,
+                        color: Colors.white70,
+                      ),
+                      tooltip: 'Cerrar Sesión',
+                      onPressed: () async {
+                        await ref.read(authNotifierProvider.notifier).signOut();
+                        if (context.mounted) {
+                          Navigator.of(context).pushAndRemoveUntil(
+                            MaterialPageRoute(builder: (_) => const AuthGate()),
+                            (route) => false,
+                          );
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 40),
+
+              // --- Menu Cards ---
+              Expanded(
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.fromLTRB(20, 32, 20, 20),
+                  decoration: const BoxDecoration(
+                    color: AppColors.background,
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(32),
+                    ),
+                  ),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        _MenuCard(
+                          icon: Icons.admin_panel_settings_rounded,
+                          label: 'Administración',
+                          subtitle: 'Fincas, Lotes, Cintas, Variedades',
+                          color: AppColors.info,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const AdminDashboardScreen(),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        _MenuCard(
+                          icon: Icons.eco_rounded,
+                          label: 'Producción',
+                          subtitle: 'Siembra, Encintado, Cosecha',
+                          color: AppColors.primary,
+                          onTap: () {
+                            final appUser = ref
+                                .read(currentUserStreamProvider)
+                                .value;
+                            final productoraId = appUser?.companyId;
+                            if (productoraId != null &&
+                                productoraId.isNotEmpty) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => ProduccionDashboardScreen(
+                                    productoraId: productoraId,
+                                  ),
+                                ),
+                              );
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Error: No se encontró la empresa productora asociada',
+                                  ),
+                                ),
+                              );
+                            }
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        _MenuCard(
+                          icon: Icons.analytics_rounded,
+                          label: 'Consultas',
+                          subtitle: 'Historial y filtros avanzados',
+                          color: AppColors.secondary,
+                          onTap: () {
+                            final appUser = ref
+                                .read(currentUserStreamProvider)
+                                .value;
+                            final productoraId = appUser?.companyId;
+                            if (productoraId != null &&
+                                productoraId.isNotEmpty) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => ConsultasScreen(
+                                    productoraId: productoraId,
+                                  ),
+                                ),
+                              );
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Error: No se encontró la empresa productora asociada',
+                                  ),
+                                ),
+                              );
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ],
           ),
@@ -90,35 +200,85 @@ class MainMenuScreen extends ConsumerWidget {
   }
 }
 
-class _MenuButton extends StatelessWidget {
+class _MenuCard extends StatelessWidget {
   final IconData icon;
   final String label;
-  final VoidCallback onPressed;
+  final String subtitle;
+  final VoidCallback onTap;
   final Color color;
 
-  const _MenuButton({
+  const _MenuCard({
     required this.icon,
     required this.label,
-    required this.onPressed,
+    required this.subtitle,
+    required this.onTap,
     required this.color,
   });
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 80,
-      child: ElevatedButton.icon(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: color,
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppColors.borderLight),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-          textStyle: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          child: Row(
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Icon(icon, size: 28, color: color),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: AppColors.textHint,
+                size: 24,
+              ),
+            ],
+          ),
         ),
-        onPressed: onPressed,
-        icon: Icon(icon, size: 32),
-        label: Text(label),
       ),
     );
   }

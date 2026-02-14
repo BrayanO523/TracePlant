@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../domain/entities/cinta.dart';
 import '../../domain/entities/finca.dart';
@@ -14,6 +15,9 @@ class AdministracionRepositoryImpl implements IAdministracionRepository {
   final FirebaseFirestore _firestore;
   final FirebaseAuth _auth;
 
+  /// Cache del companyId (productoraId) del usuario actual.
+  String? _cachedProducerId;
+
   AdministracionRepositoryImpl({
     FirebaseFirestore? firestore,
     FirebaseAuth? auth,
@@ -22,9 +26,58 @@ class AdministracionRepositoryImpl implements IAdministracionRepository {
 
   String get _currentUserId => _auth.currentUser?.uid ?? '';
 
+  /// Resuelve el companyId (id_empresa) del usuario desde su perfil Firestore.
+  Future<String> _getProducerId() async {
+    if (_cachedProducerId != null && _cachedProducerId!.isNotEmpty) {
+      return _cachedProducerId!;
+    }
+    final uid = _currentUserId;
+    if (uid.isEmpty) return '';
+
+    // 1. Obtener datos del usuario
+    final doc = await _firestore.collection('usuarios').doc(uid).get();
+    final data = doc.data();
+
+    // 2. Obtener id_empresa actual (puede ser el UID incorrecto)
+    String empresaId = (data?['id_empresa'] as String?) ?? '';
+
+    // 3. Auto-Corrección:
+    // Si no tiene empresaId o si es igual al UID (lo cual el usuario indicó incorrecto),
+    // buscamos si este usuario es DUEÑO de una productora en la colección 'productoras'.
+    if (empresaId.isEmpty || empresaId == uid) {
+      try {
+        final query = await _firestore
+            .collection('productoras')
+            .where('ownerUid', isEqualTo: uid)
+            .limit(1)
+            .get();
+
+        if (query.docs.isNotEmpty) {
+          final foundId = query.docs.first.id;
+          if (foundId != empresaId) {
+            debugPrint(
+              '⚠️ [Repository] Auto-corrigiendo ID Productora: $foundId (era: $empresaId)',
+            );
+            empresaId = foundId;
+
+            // Opcional: Persistir la corrección en el usuario para futuras sesiones
+            // await _firestore.collection('usuarios').doc(uid).update({'id_empresa': foundId});
+          }
+        }
+      } catch (e) {
+        debugPrint('⚠️ [Repository] Error en auto-corrección de ID: $e');
+      }
+    }
+
+    _cachedProducerId = empresaId;
+    return _cachedProducerId!;
+  }
+
   // --- Cintas ---
   @override
   Future<void> saveCinta(Cinta cinta) async {
+    final producerId = await _getProducerId();
+
     final collection = _firestore.collection('cintas');
     final docRef = cinta.id.isEmpty
         ? collection.doc()
@@ -35,7 +88,7 @@ class AdministracionRepositoryImpl implements IAdministracionRepository {
       color: cinta.color,
       descripcion: cinta.descripcion,
       colorHex: cinta.colorHex,
-      productoraId: cinta.productoraId,
+      productoraId: producerId,
     );
 
     await docRef.set(model.toFirestore());
@@ -43,15 +96,17 @@ class AdministracionRepositoryImpl implements IAdministracionRepository {
 
   @override
   Stream<List<Cinta>> watchCintas() {
-    return _firestore
-        .collection('cintas')
-        .where('productoraId', isEqualTo: _currentUserId)
-        .snapshots()
-        .map(
-          (snapshot) => snapshot.docs
-              .map((doc) => CintaModel.fromFirestore(doc))
-              .toList(),
-        );
+    return Stream.fromFuture(_getProducerId()).asyncExpand((producerId) {
+      return _firestore
+          .collection('cintas')
+          .where('productoraId', isEqualTo: producerId)
+          .snapshots()
+          .map(
+            (snapshot) => snapshot.docs
+                .map((doc) => CintaModel.fromFirestore(doc))
+                .toList(),
+          );
+    });
   }
 
   @override
@@ -62,31 +117,33 @@ class AdministracionRepositoryImpl implements IAdministracionRepository {
   // --- Variedades ---
   @override
   Future<void> saveVariedad(Variedad variedad) async {
+    final producerId = await _getProducerId();
     final collection = _firestore.collection('variedades');
     final docRef = variedad.id.isEmpty
         ? collection.doc()
         : collection.doc(variedad.id);
-
     final model = VariedadModel(
       id: docRef.id,
       nombre: variedad.nombre,
       descripcion: variedad.descripcion,
-      productoraId: variedad.productoraId,
+      productoraId: producerId,
     );
     await docRef.set(model.toFirestore());
   }
 
   @override
   Stream<List<Variedad>> watchVariedades() {
-    return _firestore
-        .collection('variedades')
-        .where('productoraId', isEqualTo: _currentUserId)
-        .snapshots()
-        .map(
-          (snapshot) => snapshot.docs
-              .map((doc) => VariedadModel.fromFirestore(doc))
-              .toList(),
-        );
+    return Stream.fromFuture(_getProducerId()).asyncExpand((producerId) {
+      return _firestore
+          .collection('variedades')
+          .where('productoraId', isEqualTo: producerId)
+          .snapshots()
+          .map(
+            (snapshot) => snapshot.docs
+                .map((doc) => VariedadModel.fromFirestore(doc))
+                .toList(),
+          );
+    });
   }
 
   @override
@@ -97,17 +154,17 @@ class AdministracionRepositoryImpl implements IAdministracionRepository {
   // --- Fincas ---
   @override
   Future<void> saveFinca(Finca finca) async {
+    final producerId = await _getProducerId();
     final collection = _firestore.collection('fincas');
     final docRef = finca.id.isEmpty
         ? collection.doc()
         : collection.doc(finca.id);
-
     final model = FincaModel(
       id: docRef.id,
       nombre: finca.nombre,
       ubicacion: finca.ubicacion,
       areaTotal: finca.areaTotal,
-      productoraId: finca.productoraId,
+      productoraId: producerId,
       activo: finca.activo,
     );
     await docRef.set(model.toFirestore());
@@ -115,15 +172,17 @@ class AdministracionRepositoryImpl implements IAdministracionRepository {
 
   @override
   Stream<List<Finca>> watchFincas() {
-    return _firestore
-        .collection('fincas')
-        .where('productoraId', isEqualTo: _currentUserId)
-        .snapshots()
-        .map(
-          (snapshot) => snapshot.docs
-              .map((doc) => FincaModel.fromFirestore(doc))
-              .toList(),
-        );
+    return Stream.fromFuture(_getProducerId()).asyncExpand((producerId) {
+      return _firestore
+          .collection('fincas')
+          .where('productoraId', isEqualTo: producerId)
+          .snapshots()
+          .map(
+            (snapshot) => snapshot.docs
+                .map((doc) => FincaModel.fromFirestore(doc))
+                .toList(),
+          );
+    });
   }
 
   @override
@@ -143,6 +202,7 @@ class AdministracionRepositoryImpl implements IAdministracionRepository {
   // --- Lotes ---
   @override
   Future<void> saveLote(Lote lote) async {
+    final producerId = await _getProducerId();
     final collection = _firestore.collection('lotes');
     final docRef = lote.id.isEmpty ? collection.doc() : collection.doc(lote.id);
 
@@ -152,7 +212,7 @@ class AdministracionRepositoryImpl implements IAdministracionRepository {
       area: lote.area,
       fincaId: lote.fincaId,
       variedadId: lote.variedadId,
-      productoraId: lote.productoraId,
+      productoraId: producerId,
       estado: lote.estado,
     );
     await docRef.set(model.toFirestore());
@@ -160,22 +220,26 @@ class AdministracionRepositoryImpl implements IAdministracionRepository {
 
   @override
   Stream<List<Lote>> watchLotesByFinca(String fincaId) {
-    return _firestore
-        .collection('lotes')
-        .where('productoraId', isEqualTo: _currentUserId)
-        .where('fincaId', isEqualTo: fincaId)
-        .snapshots()
-        .map(
-          (snapshot) =>
-              snapshot.docs.map((doc) => LoteModel.fromFirestore(doc)).toList(),
-        );
+    return Stream.fromFuture(_getProducerId()).asyncExpand((producerId) {
+      return _firestore
+          .collection('lotes')
+          .where('productoraId', isEqualTo: producerId)
+          .where('fincaId', isEqualTo: fincaId)
+          .snapshots()
+          .map(
+            (snapshot) => snapshot.docs
+                .map((doc) => LoteModel.fromFirestore(doc))
+                .toList(),
+          );
+    });
   }
 
   @override
   Future<List<Lote>> getLotesByFincaFuture(String fincaId) async {
+    final producerId = await _getProducerId();
     final snapshot = await _firestore
         .collection('lotes')
-        .where('productoraId', isEqualTo: _currentUserId)
+        .where('productoraId', isEqualTo: producerId)
         .where('fincaId', isEqualTo: fincaId)
         .get();
     return snapshot.docs.map((doc) => LoteModel.fromFirestore(doc)).toList();
@@ -183,14 +247,17 @@ class AdministracionRepositoryImpl implements IAdministracionRepository {
 
   @override
   Stream<List<Lote>> watchAllLotes() {
-    return _firestore
-        .collection('lotes')
-        .where('productoraId', isEqualTo: _currentUserId)
-        .snapshots()
-        .map(
-          (snapshot) =>
-              snapshot.docs.map((doc) => LoteModel.fromFirestore(doc)).toList(),
-        );
+    return Stream.fromFuture(_getProducerId()).asyncExpand((producerId) {
+      return _firestore
+          .collection('lotes')
+          .where('productoraId', isEqualTo: producerId)
+          .snapshots()
+          .map(
+            (snapshot) => snapshot.docs
+                .map((doc) => LoteModel.fromFirestore(doc))
+                .toList(),
+          );
+    });
   }
 
   @override

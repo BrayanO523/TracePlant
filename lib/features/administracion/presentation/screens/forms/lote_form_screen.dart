@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../domain/entities/finca.dart';
 import '../../../domain/entities/lote.dart';
 import '../../providers/admin_view_model.dart';
-import '../../providers/administracion_provider.dart';
 
 class LoteFormScreen extends ConsumerStatefulWidget {
   final Finca finca;
@@ -19,8 +18,6 @@ class _LoteFormScreenState extends ConsumerState<LoteFormScreen> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nombreCtrl;
   late TextEditingController _areaCtrl;
-  String? _selectedVariedadId;
-  String? _selectedVariedadNombre;
 
   @override
   void initState() {
@@ -29,8 +26,6 @@ class _LoteFormScreenState extends ConsumerState<LoteFormScreen> {
     _areaCtrl = TextEditingController(
       text: widget.lote != null ? widget.lote!.area.toString() : '',
     );
-    _selectedVariedadId = widget.lote?.variedadId;
-    _selectedVariedadNombre = widget.lote?.variedadNombre;
   }
 
   @override
@@ -53,8 +48,6 @@ class _LoteFormScreenState extends ConsumerState<LoteFormScreen> {
               nombre: nombre,
               area: area,
               fincaId: widget.finca.id,
-              variedadId: _selectedVariedadId!,
-              variedadNombre: _selectedVariedadNombre!,
             );
         if (mounted) Navigator.pop(context);
       } catch (e) {
@@ -69,8 +62,6 @@ class _LoteFormScreenState extends ConsumerState<LoteFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final variedadesAsync = ref.watch(variedadesStreamProvider);
-
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.lote == null ? 'Nuevo Lote' : 'Editar Lote'),
@@ -112,75 +103,12 @@ class _LoteFormScreenState extends ConsumerState<LoteFormScreen> {
                   },
                 ),
 
-                const SizedBox(height: 16),
-
-                // Variedad Dropdown
-                variedadesAsync.when(
-                  data: (variedades) {
-                    if (variedades.isEmpty) {
-                      return Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.amber.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.amber),
-                        ),
-                        child: const Row(
-                          children: [
-                            Icon(
-                              Icons.warning_amber_rounded,
-                              color: Colors.amber,
-                            ),
-                            SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                'No hay variedades registradas. Cree una primero.',
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }
-                    return DropdownButtonFormField<String>(
-                      value: _selectedVariedadId,
-                      decoration: const InputDecoration(
-                        labelText: 'Variedad',
-                        prefixIcon: Icon(Icons.eco_rounded),
-                      ),
-                      items: variedades.map((v) {
-                        return DropdownMenuItem(
-                          value: v.id,
-                          child: Text(v.nombre),
-                        );
-                      }).toList(),
-                      onChanged: (id) {
-                        setState(() {
-                          _selectedVariedadId = id;
-                          _selectedVariedadNombre = variedades
-                              .firstWhere((v) => v.id == id)
-                              .nombre;
-                        });
-                      },
-                      validator: (v) =>
-                          v == null ? 'Seleccione una variedad' : null,
-                    );
-                  },
-                  loading: () => const LinearProgressIndicator(),
-                  error: (e, s) => Text(
-                    'Error al cargar variedades: $e',
-                    style: const TextStyle(color: Colors.red),
-                  ),
-                ),
-
                 const SizedBox(height: 32),
 
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed:
-                        _selectedVariedadId == null && widget.lote == null
-                        ? null // Disable if no variety selected
-                        : _submit,
+                    onPressed: _submit,
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),

@@ -8,7 +8,9 @@ import '../models/asignacion_model.dart';
 
 /// Datasource remoto para operaciones de asignación en Firestore.
 ///
-/// Contiene TODAS las validaciones de integridad de datos:
+/// Lógica: a cada Empacadora se le asignan 1..N Productoras.
+///
+/// Validaciones de integridad:
 /// - Empresa existe y está activa
 /// - Productora no asignada a otra empacadora
 /// - Relación 1:N (una productora → una sola empacadora activa)
@@ -88,21 +90,6 @@ class AsignacionesRemoteDatasource {
     return snap.docs.map((doc) => EmpacadoraModel.fromFirestore(doc)).toList();
   }
 
-  /// Mapa de carga: empacadoraId → cantidad de productoras asignadas.
-  Future<Map<String, int>> getCargaTrabajo() async {
-    final snap = await _asignacionesRef
-        .where('estado', isEqualTo: EstadoAsignacion.activa.name)
-        .get();
-
-    final carga = <String, int>{};
-    for (final doc in snap.docs) {
-      final data = doc.data() as Map<String, dynamic>;
-      final idEmp = data['id_empacadora'] as String;
-      carga[idEmp] = (carga[idEmp] ?? 0) + 1;
-    }
-    return carga;
-  }
-
   // ═══════════════════════════════════════════════════════
   //  MUTACIONES
   // ═══════════════════════════════════════════════════════
@@ -166,6 +153,7 @@ class AsignacionesRemoteDatasource {
   }
 
   /// Crea múltiples asignaciones en un solo batch.
+  /// Asigna N productoras a UNA empacadora.
   /// Valida cada productora individualmente antes de crear.
   Future<void> crearAsignacionesBatch({
     required String idEmpacadora,
@@ -238,50 +226,5 @@ class AsignacionesRemoteDatasource {
       'estado': EstadoAsignacion.finalizada.name,
       'fecha_finalizacion': FieldValue.serverTimestamp(),
     });
-  }
-  // ═══════════════════════════════════════════════════════
-  //  CONSULTAS CRUZADAS (Producción)
-  // ═══════════════════════════════════════════════════════
-
-  CollectionReference get _lotesRef =>
-      _firestore.collection(FirestorePaths.lotes);
-
-  /// Obtiene los lotes de una lista de productoras.
-  ///
-  /// Útil para mostrar detalle en el selector de asignación.
-  Future<List<dynamic>> getLotesPorProductoras(
-    List<String> idsProductoras,
-  ) async {
-    if (idsProductoras.isEmpty) return [];
-
-    // Firestore 'whereIn' soporta máximo 10 valores.
-    // Si son más, hay que hacer múltiples queries o iterar.
-    // Para simplificar y dado que 'Lotes' es una colección root con 'id_productora',
-    // podemos hacer chunks de 10.
-
-    final List<dynamic> allLotes = [];
-    final chunks = <List<String>>[];
-
-    for (var i = 0; i < idsProductoras.length; i += 10) {
-      chunks.add(
-        idsProductoras.sublist(
-          i,
-          i + 10 > idsProductoras.length ? idsProductoras.length : i + 10,
-        ),
-      );
-    }
-
-    // Importar dinámicamente LoteModel aquí podría ser un problema si no tenemos acceso
-    // al tipo LoteModel dentro del datasource de Asignaciones si no importamos el archivo.
-    // Sin embargo, devolveremos List<QueryDocumentSnapshot> o Map para que el Repo mapee.
-    // Mejor retornamos List<Map<String, dynamic>>.
-
-    for (final chunk in chunks) {
-      final snap = await _lotesRef.where('id_productora', whereIn: chunk).get();
-
-      allLotes.addAll(snap.docs.map((d) => d.data()));
-    }
-
-    return allLotes;
   }
 }
