@@ -122,8 +122,11 @@ final produccionRepositoryProvider = Provider<ProduccionRepository>((ref) {
 });
 
 // Lotes Notifier (Family por Productora ID)
-final lotesNotifierProvider = StateNotifierProvider.autoDispose
-    .family<LotesNotifier, LotesState, String>((ref, productoraId) {
+final lotesNotifierProvider =
+    StateNotifierProvider.family<LotesNotifier, LotesState, String>((
+      ref,
+      productoraId,
+    ) {
       return LotesNotifier(
         ref.read(produccionRepositoryProvider),
         productoraId,
@@ -131,8 +134,11 @@ final lotesNotifierProvider = StateNotifierProvider.autoDispose
     });
 
 // Produccion Notifier (Ciclos) (Family por Productora ID)
-final produccionNotifierProvider = StateNotifierProvider.autoDispose
-    .family<ProduccionNotifier, ProduccionState, String>((ref, productoraId) {
+final produccionNotifierProvider =
+    StateNotifierProvider.family<ProduccionNotifier, ProduccionState, String>((
+      ref,
+      productoraId,
+    ) {
       return ProduccionNotifier(
         ref.read(produccionRepositoryProvider),
         productoraId,
@@ -152,13 +158,11 @@ final administracionRepositoryProvider = Provider<IAdministracionRepository>((
   );
 });
 
-final variedadesStreamProvider = StreamProvider.autoDispose<List<Variedad>>((
-  ref,
-) {
+final variedadesStreamProvider = StreamProvider<List<Variedad>>((ref) {
   return ref.watch(administracionRepositoryProvider).watchVariedades();
 });
 
-final cintasStreamProvider = StreamProvider.autoDispose<List<Cinta>>((ref) {
+final cintasStreamProvider = StreamProvider<List<Cinta>>((ref) {
   return ref.watch(administracionRepositoryProvider).watchCintas();
 });
 
@@ -177,9 +181,7 @@ final asignacionesRepositoryProvider = Provider<AsignacionesRepository>((ref) {
 });
 
 final asignacionesNotifierProvider =
-    StateNotifierProvider.autoDispose<AsignacionesNotifier, AsignacionesState>((
-      ref,
-    ) {
+    StateNotifierProvider<AsignacionesNotifier, AsignacionesState>((ref) {
       return AsignacionesNotifier(ref.read(asignacionesRepositoryProvider));
     });
 
@@ -198,11 +200,12 @@ final empacadoraRepositoryProvider = Provider<EmpacadoraRepository>((ref) {
 });
 
 /// Dashboard Notifier (Family por Empacadora ID)
-final empacadoraDashboardProvider = StateNotifierProvider.autoDispose
-    .family<EmpacadoraDashboardNotifier, EmpacadoraDashboardState, String>((
-      ref,
-      empacadoraId,
-    ) {
+final empacadoraDashboardProvider =
+    StateNotifierProvider.family<
+      EmpacadoraDashboardNotifier,
+      EmpacadoraDashboardState,
+      String
+    >((ref, empacadoraId) {
       return EmpacadoraDashboardNotifier(
         ref.read(empacadoraRepositoryProvider),
         empacadoraId,
