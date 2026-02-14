@@ -10,6 +10,8 @@ class Productora extends Equatable {
   final String? contactEmail;
   final bool isActive;
   final String ownerUid;
+  final int
+  semanasParaCosecha; // Semanas después de encintado para proyectar cosecha
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -23,6 +25,7 @@ class Productora extends Equatable {
     this.contactEmail,
     this.isActive = true,
     required this.ownerUid,
+    this.semanasParaCosecha = 30,
     this.createdAt,
     this.updatedAt,
   });
@@ -36,6 +39,7 @@ class Productora extends Equatable {
     rnt,
     isActive,
     ownerUid,
+    semanasParaCosecha,
     createdAt,
     updatedAt,
   ];
