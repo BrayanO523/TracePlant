@@ -208,6 +208,11 @@ class ConsultasNotifier extends StateNotifier<ConsultasState> {
     _applyFilters();
   }
 
+  void setLoteFilter(String? lote) {
+    state = state.copyWith(loteFilter: lote);
+    _applyFilters();
+  }
+
   void clearFilters() {
     state = ConsultasState(
       isLoading: state.isLoading,
@@ -258,6 +263,13 @@ class ConsultasNotifier extends StateNotifier<ConsultasState> {
       }).toList();
     }
 
+    // 4. Filtro de Lote
+    if (state.loteFilter != null && state.loteFilter!.isNotEmpty) {
+      filtered = filtered
+          .where((c) => c.nombreLote == state.loteFilter)
+          .toList();
+    }
+
     _calculateTotals(filtered);
   }
 
@@ -291,17 +303,20 @@ class ConsultasNotifier extends StateNotifier<ConsultasState> {
     );
   }
 
-  /// Calcula inventario: ciclos en estado Encintado (pendientes de cosecha)
+  /// Calcula inventario: ciclos cosechados pendientes de entrega a empacadora
   void _calculateInventario() {
     final inv = state.ciclos
-        .where((c) => c.estado == EstadoCiclo.encintado)
+        .where((c) => c.estado == EstadoCiclo.cosechado)
         .toList();
     inv.sort((a, b) {
-      final fa = a.ultimoEncintadoFecha ?? DateTime(2000);
-      final fb = b.ultimoEncintadoFecha ?? DateTime(2000);
-      return fb.compareTo(fa);
+      final fa = a.fechaCosecha ?? DateTime(2000);
+      final fb = b.fechaCosecha ?? DateTime(2000);
+      return fb.compareTo(fa); // Más reciente primero
     });
-    final total = inv.fold<double>(0, (sum, c) => sum + c.totalEncintado);
+    final total = inv.fold<double>(
+      0,
+      (sum, c) => sum + (c.cantidadCosecha ?? 0),
+    );
     state = state.copyWith(inventario: inv, totalInventario: total);
   }
 

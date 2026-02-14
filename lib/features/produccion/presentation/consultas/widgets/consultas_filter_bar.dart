@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../../../app/theme/app_colors.dart';
+import 'searchable_filter_sheet.dart';
 
 class ConsultasFilterBar extends StatelessWidget {
   final DateTime? startDate;
@@ -7,12 +8,12 @@ class ConsultasFilterBar extends StatelessWidget {
   final String? variedadFilter;
   final String? loteFilter;
   final String? cintaFilter;
-  final VoidCallback onDateTap;
+  final VoidCallback onStartDateTap;
+  final VoidCallback onEndDateTap;
   final VoidCallback onClearTap;
   final Function(String?) onVariedadChanged;
   final Function(String?) onLoteChanged;
 
-  // Opcional: Listas de opciones para los dropdowns
   final List<String> variedadesDisponibles;
   final List<String> lotesDisponibles;
 
@@ -23,7 +24,8 @@ class ConsultasFilterBar extends StatelessWidget {
     required this.variedadFilter,
     required this.loteFilter,
     required this.cintaFilter,
-    required this.onDateTap,
+    required this.onStartDateTap,
+    required this.onEndDateTap,
     required this.onClearTap,
     required this.onVariedadChanged,
     required this.onLoteChanged,
@@ -33,6 +35,7 @@ class ConsultasFilterBar extends StatelessWidget {
 
   bool get hasFilters =>
       startDate != null ||
+      endDate != null ||
       variedadFilter != null ||
       loteFilter != null ||
       cintaFilter != null;
@@ -40,74 +43,47 @@ class ConsultasFilterBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            offset: const Offset(0, 4),
-            blurRadius: 10,
-          ),
-        ],
-      ),
+      // Fondo transparente como se solicitó
+      decoration: const BoxDecoration(color: Colors.transparent),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
           children: [
-            // Filtro de Fecha
-            _FilterChip(
-              label: (startDate != null && endDate != null)
-                  ? '${startDate!.day}/${startDate!.month} - ${endDate!.day}/${endDate!.month}'
-                  : 'Fecha',
-              icon: Icons.calendar_today_rounded,
-              isActive: startDate != null,
-              onTap: onDateTap,
+            // Botón Desde
+            _DateFilterButton(
+              label: 'Desde',
+              date: startDate,
+              onTap: onStartDateTap,
             ),
             const SizedBox(width: 8),
 
-            // Filtro Variedad (Simulado como botón por ahora, idealmente un sheet o menu)
-            // Para simplificar UX, usaremos un PopupMenuButton invisible sobre el chip o similar.
-            // Aquí un chip simple que abre un selector externo sería mejor,
-            // pero si queremos 'inline', PopupMenuButton es útil.
-            PopupMenuButton<String>(
+            // Botón Hasta
+            _DateFilterButton(
+              label: 'Hasta',
+              date: endDate,
+              onTap: onEndDateTap,
+            ),
+            const SizedBox(width: 16), // Separador visual entre fechas y otros
+            // Filtro Variedad (estilo Dropdown flotante)
+            // Filtro Variedad (estilo Dropdown flotante con búsqueda)
+            _FilterSheetButton(
+              label: 'Variedad',
+              value: variedadFilter,
+              icon: Icons.eco_rounded,
+              options: variedadesDisponibles,
               onSelected: onVariedadChanged,
-              itemBuilder: (context) => [
-                const PopupMenuItem(
-                  value: null,
-                  child: Text('Todas las variedades'),
-                ),
-                ...variedadesDisponibles.map(
-                  (v) => PopupMenuItem(value: v, child: Text(v)),
-                ),
-              ],
-              child: _FilterChip(
-                label: variedadFilter ?? 'Variedad',
-                icon: Icons.eco_rounded,
-                isActive: variedadFilter != null,
-                onTap: null, // El tap lo maneja el PopupMenuButton
-              ),
             ),
             const SizedBox(width: 8),
 
-            // Filtro Lote
-            PopupMenuButton<String>(
+            // Filtro Lote (estilo Dropdown flotante)
+            // Filtro Lote (estilo Dropdown flotante con búsqueda)
+            _FilterSheetButton(
+              label: 'Lote',
+              value: loteFilter,
+              icon: Icons.grid_view_rounded,
+              options: lotesDisponibles,
               onSelected: onLoteChanged,
-              itemBuilder: (context) => [
-                const PopupMenuItem(
-                  value: null,
-                  child: Text('Todos los lotes'),
-                ),
-                ...lotesDisponibles.map(
-                  (l) => PopupMenuItem(value: l, child: Text(l)),
-                ),
-              ],
-              child: _FilterChip(
-                label: loteFilter ?? 'Lote',
-                icon: Icons.grid_view_rounded,
-                isActive: loteFilter != null,
-                onTap: null,
-              ),
             ),
 
             if (hasFilters) ...[
@@ -117,12 +93,12 @@ class ConsultasFilterBar extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.red.shade50,
+                    color: Colors.red.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
                     Icons.close,
-                    size: 16,
+                    size: 18,
                     color: Colors.red.shade400,
                   ),
                 ),
@@ -135,34 +111,128 @@ class ConsultasFilterBar extends StatelessWidget {
   }
 }
 
-class _FilterChip extends StatelessWidget {
+class _DateFilterButton extends StatelessWidget {
   final String label;
-  final IconData icon;
-  final bool isActive;
-  final VoidCallback? onTap;
+  final DateTime? date;
+  final VoidCallback onTap;
 
-  const _FilterChip({
+  const _DateFilterButton({
     required this.label,
-    required this.icon,
-    required this.isActive,
-    this.onTap,
+    required this.date,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    final isActive = date != null;
+    final text = isActive ? '${date!.day}/${date!.month}/${date!.year}' : label;
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(12),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
-            color: isActive ? AppColors.accent : Colors.grey.shade100,
-            borderRadius: BorderRadius.circular(20),
+            color: isActive ? AppColors.accent : Colors.white,
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: isActive ? Colors.transparent : Colors.grey.shade300,
             ),
+            boxShadow: [
+              if (!isActive)
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.calendar_today_rounded,
+                size: 16,
+                color: isActive ? Colors.white : AppColors.textSecondary,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                text,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: isActive ? Colors.white : AppColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FilterSheetButton extends StatelessWidget {
+  final String label;
+  final String? value;
+  final IconData icon;
+  final List<String> options;
+  final Function(String?) onSelected;
+
+  const _FilterSheetButton({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.options,
+    required this.onSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isActive = value != null;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            backgroundColor: Colors.transparent,
+            builder: (context) => DraggableScrollableSheet(
+              initialChildSize: 0.7,
+              minChildSize: 0.5,
+              maxChildSize: 0.95,
+              builder: (_, controller) {
+                // Return our custom sheet inside
+                return SearchableFilterSheet(
+                  title: label,
+                  options: options,
+                  selectedValue: value,
+                  onSelected: onSelected,
+                );
+              },
+            ),
+          );
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: isActive ? AppColors.accent : Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isActive ? Colors.transparent : Colors.grey.shade300,
+            ),
+            boxShadow: [
+              if (!isActive)
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+            ],
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -173,13 +243,24 @@ class _FilterChip extends StatelessWidget {
                 color: isActive ? Colors.white : AppColors.textSecondary,
               ),
               const SizedBox(width: 6),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: isActive ? Colors.white : AppColors.textPrimary,
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 100),
+                child: Text(
+                  value ?? label,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: isActive ? Colors.white : AppColors.textPrimary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
+              ),
+              const SizedBox(width: 4),
+              Icon(
+                Icons.arrow_drop_down_rounded,
+                size: 18,
+                color: isActive ? Colors.white : Colors.grey.shade400,
               ),
             ],
           ),

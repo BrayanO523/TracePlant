@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../../app/di/providers.dart';
 import '../../../../../app/theme/app_colors.dart';
 import '../../../../../core/constants/firestore_paths.dart';
 import '../viewmodels/consultas_notifier.dart';
@@ -9,6 +10,7 @@ import '../widgets/export_button.dart';
 import '../logic/pdf_report_generator.dart';
 import '../../widgets/ciclo_timeline.dart';
 import '../../../../../features/administracion/domain/entities/cinta.dart';
+import '../../../domain/entities/ciclo_produccion.dart';
 
 class ConsultasScreen extends ConsumerStatefulWidget {
   final String productoraId;
@@ -27,17 +29,15 @@ class _ConsultasScreenState extends ConsumerState<ConsultasScreen> {
 
   // --- Actions ---
 
-  Future<void> _pickDateRange(BuildContext context) async {
+  Future<void> _pickStartDate() async {
     final state = ref.read(consultasProvider(widget.productoraId));
     final notifier = ref.read(consultasProvider(widget.productoraId).notifier);
 
-    final picked = await showDateRangePicker(
+    final picked = await showDatePicker(
       context: context,
+      initialDate: state.fechaInicio ?? DateTime.now(),
       firstDate: DateTime(2020),
       lastDate: DateTime(2030),
-      initialDateRange: (state.fechaInicio != null && state.fechaFin != null)
-          ? DateTimeRange(start: state.fechaInicio!, end: state.fechaFin!)
-          : null,
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
@@ -53,7 +53,35 @@ class _ConsultasScreenState extends ConsumerState<ConsultasScreen> {
     );
 
     if (picked != null) {
-      notifier.setDateRange(picked.start, picked.end);
+      notifier.setDateRange(picked, state.fechaFin);
+    }
+  }
+
+  Future<void> _pickEndDate() async {
+    final state = ref.read(consultasProvider(widget.productoraId));
+    final notifier = ref.read(consultasProvider(widget.productoraId).notifier);
+
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: state.fechaFin ?? DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: AppColors.accent,
+              onPrimary: Colors.white,
+              onSurface: AppColors.textPrimary,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      notifier.setDateRange(state.fechaInicio, picked);
     }
   }
 
@@ -273,12 +301,12 @@ class _ConsultasScreenState extends ConsumerState<ConsultasScreen> {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: Colors.orange.withOpacity(0.1),
+                        color: AppColors.estadoEntregado.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(
-                        Icons.layers_rounded,
-                        color: Colors.orange,
+                        Icons.inventory_2_rounded,
+                        color: AppColors.estadoEntregado,
                         size: 24,
                       ),
                     ),
@@ -288,7 +316,7 @@ class _ConsultasScreenState extends ConsumerState<ConsultasScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
-                            'Inventario en Campo',
+                            'Inventario Cosechado',
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -296,7 +324,7 @@ class _ConsultasScreenState extends ConsumerState<ConsultasScreen> {
                             ),
                           ),
                           Text(
-                            '${state.inventario.length} lotes · ${state.totalInventario.toStringAsFixed(0)} cintas activas',
+                            '${state.inventario.length} lotes \u00b7 ${state.totalInventario.toStringAsFixed(0)} unidades pendientes de entrega',
                             style: TextStyle(
                               fontSize: 13,
                               color: Colors.grey.shade500,
@@ -322,7 +350,7 @@ class _ConsultasScreenState extends ConsumerState<ConsultasScreen> {
                             ),
                             const SizedBox(height: 12),
                             Text(
-                              'Sin cintas activas en campo',
+                              'Sin cosechas pendientes de entrega',
                               style: TextStyle(
                                 color: Colors.grey.shade400,
                                 fontSize: 15,
@@ -338,8 +366,9 @@ class _ConsultasScreenState extends ConsumerState<ConsultasScreen> {
                         separatorBuilder: (_, __) => const SizedBox(height: 10),
                         itemBuilder: (context, index) {
                           final ciclo = state.inventario[index];
-                          return _ResultCard(
+                          return _InventarioCard(
                             ciclo: ciclo,
+                            productoraId: widget.productoraId,
                             onTap: () => _showCicloTimeline(ciclo),
                           );
                         },
@@ -405,10 +434,11 @@ class _ConsultasScreenState extends ConsumerState<ConsultasScreen> {
                 variedadFilter: state.variedadFilter,
                 loteFilter: state.loteFilter,
                 cintaFilter: state.cintaFilter,
-                onDateTap: () => _pickDateRange(context),
+                onStartDateTap: _pickStartDate,
+                onEndDateTap: _pickEndDate,
                 onClearTap: notifier.clearFilters,
                 onVariedadChanged: notifier.setVariedadFilter,
-                onLoteChanged: (v) {},
+                onLoteChanged: notifier.setLoteFilter,
                 variedadesDisponibles: variedades,
                 lotesDisponibles: lotes,
               ),
@@ -460,14 +490,16 @@ class _ConsultasScreenState extends ConsumerState<ConsultasScreen> {
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
-                              Colors.orange.shade400,
-                              Colors.orange.shade600,
+                              AppColors.estadoEntregado,
+                              AppColors.estadoEntregado.withValues(alpha: 0.8),
                             ],
                           ),
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.orange.withOpacity(0.3),
+                              color: AppColors.estadoEntregado.withValues(
+                                alpha: 0.3,
+                              ),
                               blurRadius: 12,
                               offset: const Offset(0, 4),
                             ),
@@ -478,11 +510,11 @@ class _ConsultasScreenState extends ConsumerState<ConsultasScreen> {
                             Container(
                               padding: const EdgeInsets.all(10),
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
+                                color: Colors.white.withValues(alpha: 0.2),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: const Icon(
-                                Icons.layers_rounded,
+                                Icons.inventory_2_rounded,
                                 color: Colors.white,
                                 size: 24,
                               ),
@@ -493,7 +525,7 @@ class _ConsultasScreenState extends ConsumerState<ConsultasScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   const Text(
-                                    'Inventario en Campo',
+                                    'Inventario Cosechado',
                                     style: TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
@@ -502,7 +534,7 @@ class _ConsultasScreenState extends ConsumerState<ConsultasScreen> {
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    '${state.inventario.length} lotes · ${state.totalInventario.toStringAsFixed(0)} cintas activas',
+                                    '${state.inventario.length} lotes \u00b7 ${state.totalInventario.toStringAsFixed(0)} unidades pendientes',
                                     style: TextStyle(
                                       fontSize: 13,
                                       color: Colors.white.withOpacity(0.85),
@@ -897,7 +929,7 @@ class _LoteSection extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '${ciclo.variedad} · $dateStr',
+                            '${ciclo.variedad} \u00b7 $dateStr \u00b7 ${DateTime.now().difference(ciclo.fechaSiembra).inDays} d\u00edas',
                             style: const TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
@@ -1085,6 +1117,168 @@ class _ResultCard extends StatelessWidget {
                 Icons.chevron_right_rounded,
                 color: Colors.grey.shade300,
                 size: 20,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Card de inventario cosechado con botón de entrega.
+class _InventarioCard extends ConsumerWidget {
+  final CicloProduccion ciclo;
+  final String productoraId;
+  final VoidCallback onTap;
+
+  const _InventarioCard({
+    required this.ciclo,
+    required this.productoraId,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final dateStr = ciclo.fechaCosecha != null
+        ? '${ciclo.fechaCosecha!.day}/${ciclo.fechaCosecha!.month}/${ciclo.fechaCosecha!.year}'
+        : 'Sin fecha';
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.grey.shade200),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header: lote + variedad
+              Row(
+                children: [
+                  Container(
+                    width: 6,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: AppColors.estadoCosechado,
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          ciclo.nombreLote,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        Text(
+                          '${ciclo.variedad} \u00b7 ${DateTime.now().difference(ciclo.fechaSiembra).inDays} d\u00edas',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey.shade500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Cantidad cosechada
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        '${ciclo.cantidadCosecha?.toStringAsFixed(0) ?? "0"}',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.estadoCosechado,
+                        ),
+                      ),
+                      Text(
+                        'Cosechado $dateStr',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey.shade400,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              // Botón entregar
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () async {
+                    final confirmed = await showDialog<bool>(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text('Confirmar Entrega'),
+                        content: Text(
+                          '\u00bfMarcar ${ciclo.nombreLote} como entregado a empacadora?\n\nCantidad: ${ciclo.cantidadCosecha?.toStringAsFixed(0) ?? "0"}',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(ctx, false),
+                            child: const Text('Cancelar'),
+                          ),
+                          FilledButton(
+                            onPressed: () => Navigator.pop(ctx, true),
+                            child: const Text('Entregar'),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (confirmed == true && context.mounted) {
+                      final authState = ref.read(authStateStreamProvider);
+                      final uid = authState.asData?.value?.uid ?? 'unknown';
+                      final notifier = ref.read(
+                        produccionNotifierProvider(productoraId).notifier,
+                      );
+                      final ok = await notifier.registrarEntrega(
+                        idCiclo: ciclo.id,
+                        uidUsuario: uid,
+                      );
+                      if (ok && context.mounted) {
+                        Navigator.pop(context); // Cerrar bottom sheet
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Entrega registrada exitosamente'),
+                            backgroundColor: AppColors.estadoEntregado,
+                          ),
+                        );
+                      }
+                    }
+                  },
+                  icon: const Icon(Icons.local_shipping_rounded, size: 18),
+                  label: const Text('Marcar Entregado'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.estadoEntregado,
+                    side: const BorderSide(color: AppColors.estadoEntregado),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
               ),
             ],
           ),
