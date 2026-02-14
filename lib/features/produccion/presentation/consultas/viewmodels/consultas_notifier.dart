@@ -140,9 +140,10 @@ class ConsultasNotifier extends StateNotifier<ConsultasState> {
     state = state.copyWith(isLoading: true);
     final repo = ref.read(produccionRepositoryProvider);
 
-    // Suscribirse al stream de ciclos
+    // Suscribirse al stream de ciclos ACTIVOS (escalabilidad)
+    // TODO: Para reportes históricos masivos, usar backend aggregation functions
     repo
-        .watchCiclos(productoraId)
+        .watchCiclosActivos(productoraId)
         .listen(
           (ciclos) {
             if (mounted) {

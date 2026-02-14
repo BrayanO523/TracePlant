@@ -31,8 +31,30 @@ class ProduccionRepositoryImpl implements ProduccionRepository {
   // ═══════════════════════════════════════════════════════
 
   @override
-  Stream<List<CicloProduccion>> watchCiclos(String productoraId) {
-    return _datasource.watchCiclos(productoraId);
+  Stream<List<CicloProduccion>> watchCiclosActivos(String productoraId) {
+    return _datasource.watchCiclosActivos(productoraId);
+  }
+
+  @override
+  Future<Result<List<CicloProduccion>>> getHistorialCiclos({
+    required String productoraId,
+    String? fincaId,
+    String? loteId,
+    int limit = 20,
+    DateTime? lastDate,
+  }) async {
+    try {
+      final lista = await _datasource.getHistorialCiclos(
+        productoraId: productoraId,
+        fincaId: fincaId,
+        loteId: loteId,
+        limit: limit,
+        lastDate: lastDate,
+      );
+      return Success(lista);
+    } catch (e) {
+      return FailureResult(ServerFailure('Error al cargar historial: $e'));
+    }
   }
 
   @override

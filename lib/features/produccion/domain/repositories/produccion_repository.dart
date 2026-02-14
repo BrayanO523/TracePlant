@@ -12,7 +12,17 @@ abstract class ProduccionRepository {
   Stream<List<Finca>> watchFincas(String productoraId);
 
   // --- Ciclos ---
-  Stream<List<CicloProduccion>> watchCiclos(String productoraId);
+  // --- Ciclos ---
+  Stream<List<CicloProduccion>> watchCiclosActivos(String productoraId);
+
+  Future<Result<List<CicloProduccion>>> getHistorialCiclos({
+    required String productoraId,
+    String? fincaId,
+    String? loteId,
+    int limit = 20,
+    DateTime? lastDate,
+  });
+
   Future<Result<CicloProduccion>> getCicloActivo(
     String productoraId,
     String idLote,

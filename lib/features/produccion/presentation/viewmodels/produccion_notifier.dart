@@ -86,7 +86,7 @@ class ProduccionNotifier extends StateNotifier<ProduccionState> {
   void _watchCiclos() {
     _ciclosSubscription?.cancel();
     _ciclosSubscription = _repository
-        .watchCiclos(productoraId)
+        .watchCiclosActivos(productoraId)
         .listen(
           (ciclos) {
             state = state.copyWith(

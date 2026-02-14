@@ -861,7 +861,7 @@ class _LoteSection extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        '${ciclos.length} ciclos · ${totalCintas.toStringAsFixed(0)} cintas · ${totalCosecha.toStringAsFixed(0)} Kg',
+                        '${ciclos.length} ciclos · ${totalCintas.toStringAsFixed(0)} cintas · ${totalCosecha.toStringAsFixed(0)} Uds',
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.grey.shade500,

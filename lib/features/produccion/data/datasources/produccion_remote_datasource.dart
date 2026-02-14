@@ -65,9 +65,13 @@ class ProduccionRemoteDatasource {
   //  CICLOS DE PRODUCCIÓN
   // ═══════════════════════════════════════════════════════
 
-  Stream<List<CicloProduccionModel>> watchCiclos(String productoraId) {
+  Stream<List<CicloProduccionModel>> watchCiclosActivos(String productoraId) {
     return _ciclosRef()
         .where('id_productora', isEqualTo: productoraId)
+        .where(
+          'estado',
+          whereIn: ['sembrado', 'encintado', 'cosechado'],
+        ) // SOLO activos
         .orderBy('fecha_creacion', descending: true)
         .snapshots()
         .map(
@@ -75,6 +79,37 @@ class ProduccionRemoteDatasource {
               .map((doc) => CicloProduccionModel.fromFirestore(doc))
               .toList(),
         );
+  }
+
+  Future<List<CicloProduccionModel>> getHistorialCiclos({
+    required String productoraId,
+    String? fincaId,
+    String? loteId,
+    int limit = 20,
+    DateTime? lastDate,
+  }) async {
+    Query query = _ciclosRef()
+        .where('id_productora', isEqualTo: productoraId)
+        .where('estado', whereIn: ['entregado', 'cancelado']) // Solo inactivos
+        .orderBy('fecha_creacion', descending: true)
+        .limit(limit);
+
+    if (loteId != null) {
+      query = query.where('id_lote', isEqualTo: loteId);
+    }
+
+    if (lastDate != null) {
+      // Usamos startAfter con el valor del campo orderBy
+      query = query.startAfter([Timestamp.fromDate(lastDate)]);
+    }
+
+    // NOTA: Requiere índice compuesto (productora + estado + fecha)
+    // y (productora + estado + lote + fecha)
+
+    final snap = await query.get();
+    return snap.docs
+        .map((doc) => CicloProduccionModel.fromFirestore(doc))
+        .toList();
   }
 
   Future<CicloProduccionModel?> getCicloActivo(

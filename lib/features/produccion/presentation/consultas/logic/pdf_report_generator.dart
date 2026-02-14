@@ -99,7 +99,7 @@ class PdfReportGenerator {
           ),
           _buildSummaryItem(
             'Cosechado',
-            '${state.totalCosechado.toStringAsFixed(1)} Kg',
+            '${state.totalCosechado.toStringAsFixed(1)} Uds',
           ), // Asumiendo unidad
         ],
       ),
