@@ -6,12 +6,11 @@ import '../viewmodels/produccion_notifier.dart';
 import '../../domain/entities/ciclo_produccion.dart';
 import '../../domain/entities/produccion_enums.dart';
 
-import '../../../administracion/domain/entities/cinta.dart'; // Import Cinta
-import '../widgets/estado_indicador.dart';
+import '../../../administracion/domain/entities/cinta.dart';
 import 'ciclo_history_screen.dart';
 
-/// Formulario premium para registrar eventos del ciclo.
-/// Campos dinámicos según el paso: Siembra, Encintado, Cosecha.
+/// Formulario premium para registrar eventos del ciclo (Siembra, Encintado, Cosecha).
+/// Re-diseñado con estilo "Card-based" profesional.
 class CicloFormScreen extends ConsumerStatefulWidget {
   final String productoraId;
   final String idLote;
@@ -38,6 +37,7 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _areaController;
   late final TextEditingController _variedadController;
+
   // Encintado
   Cinta? _cintaSeleccionada;
   final _cantidadEncintadoController = TextEditingController();
@@ -55,9 +55,6 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
     _variedadController = TextEditingController(
       text: widget.variedadLote ?? '',
     );
-
-    // Si es el paso de encintado y no hay encintados previos, mostramos el form por defecto
-    // Si ya hay encintados, mostramos el botón de "Agregar"
   }
 
   @override
@@ -76,49 +73,50 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
     );
 
     // Escuchar mensajes de éxito/error
-    ref.listen<
-      ProduccionState
-    >(produccionNotifierProvider(widget.productoraId), (prev, next) {
-      if (next.successMessage != null &&
-          prev?.successMessage != next.successMessage) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(next.successMessage!),
-            backgroundColor: AppColors.estadoCosechado,
-          ),
-        );
-        ref
-            .read(produccionNotifierProvider(widget.productoraId).notifier)
-            .clearMessages();
+    ref.listen<ProduccionState>(
+      produccionNotifierProvider(widget.productoraId),
+      (prev, next) {
+        if (next.successMessage != null &&
+            prev?.successMessage != next.successMessage) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(next.successMessage!),
+              backgroundColor: AppColors.estadoCosechado,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+          ref
+              .read(produccionNotifierProvider(widget.productoraId).notifier)
+              .clearMessages();
 
-        // Si estamos en encintado, limpiamos el formulario pero NO cerramos la pantalla
-        if (widget.siguientePaso == TipoEvento.encintado) {
-          setState(() {
-            _showEncintadoForm = false;
-            _cantidadEncintadoController.clear();
-            _cintaSeleccionada = null;
-          });
-        } else {
-          // Si es siembra o cosecha, cerramos
-          Navigator.pop(context);
+          if (widget.siguientePaso == TipoEvento.encintado) {
+            setState(() {
+              _showEncintadoForm = false;
+              _cantidadEncintadoController.clear();
+              _cintaSeleccionada = null;
+            });
+          } else {
+            Navigator.pop(context);
+          }
         }
-      }
-      if (next.error != null && prev?.error != next.error) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(next.error!),
-            backgroundColor: AppColors.estadoCancelado,
-          ),
-        );
-        ref
-            .read(produccionNotifierProvider(widget.productoraId).notifier)
-            .clearMessages();
-      }
-    });
+        if (next.error != null && prev?.error != next.error) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(next.error!),
+              backgroundColor: AppColors.estadoCancelado,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+          ref
+              .read(produccionNotifierProvider(widget.productoraId).notifier)
+              .clearMessages();
+        }
+      },
+    );
 
     final paso = widget.siguientePaso;
 
-    // Buscar ciclo activo del lote
+    // Buscar ciclo activo
     final cicloActivo = produccionState.ciclos
         .where(
           (c) =>
@@ -130,12 +128,20 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
     final ciclo = cicloActivo.isNotEmpty ? cicloActivo.first : null;
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF5F7FA), // Surface gris suave
       appBar: AppBar(
-        title: Text(_tituloFormulario(paso)),
+        title: Text(
+          _tituloFormulario(paso),
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        centerTitle: true,
+        elevation: 0,
+        backgroundColor: Colors.white,
+        foregroundColor: AppColors.textPrimary,
         actions: [
           if (ciclo != null)
             IconButton(
-              tooltip: 'Ver Historial del Ciclo',
+              tooltip: 'Ver Historial',
               icon: const Icon(Icons.history_rounded),
               onPressed: () {
                 Navigator.push(
@@ -155,24 +161,18 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // Header Lote (Moderno)
               _buildLoteHeader(theme, ciclo),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
+
               if (paso == null)
                 _buildCompletedMessage(theme)
               else ...[
-                // Indicador de paso actual
-                Center(
-                  child: EstadoIndicador(
-                    estadoCiclo: paso == TipoEvento.siembra
-                        ? null // Siembra es el inicio
-                        : (paso == TipoEvento.encintado
-                              ? EstadoCiclo.encintado
-                              : EstadoCiclo.cosechado),
-                  ),
-                ),
-                const SizedBox(height: 24),
+                // Fecha Evento (Card separado para resaltar)
+                _buildDatePicker(theme),
+                const SizedBox(height: 20),
 
-                // Campos dinámicos
+                // Campos dinámicos en Cards
                 ..._buildDynamicFields(
                   paso,
                   ciclo,
@@ -188,11 +188,9 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
   }
 
   // ═══════════════════════════════════════════════════════
-  //  HEADER & DAY COUNTER
+  //  MODERN HEADER
   // ═══════════════════════════════════════════════════════
-
   Widget _buildLoteHeader(ThemeData theme, CicloProduccion? ciclo) {
-    // Calcular días desde siembra
     String diasTexto = '';
     if (ciclo != null) {
       final days = DateTime.now().difference(ciclo.fechaSiembra).inDays;
@@ -200,70 +198,85 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
     }
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
+          colors: [AppColors.primary, AppColors.primaryDark],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            theme.colorScheme.primary.withOpacity(0.08),
-            theme.colorScheme.primary.withOpacity(0.02),
-          ],
         ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.colorScheme.primary.withOpacity(0.15)),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.3),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Row(
         children: [
           Container(
-            width: 48,
-            height: 48,
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: theme.colorScheme.primary.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(14),
+              color: Colors.white.withValues(alpha: 0.2),
+              shape: BoxShape.circle,
             ),
-            child: Icon(
+            child: const Icon(
               Icons.grass_rounded,
-              color: theme.colorScheme.primary,
-              size: 24,
+              color: Colors.white,
+              size: 28,
             ),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   widget.nombreLote,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
                 if (ciclo != null) ...[
                   const SizedBox(height: 4),
                   Text(
-                    '${ciclo.area.toStringAsFixed(1)} mz · ${ciclo.variedad}',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
+                    '${ciclo.variedad} • ${ciclo.area.toStringAsFixed(1)} mz',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.9),
+                      fontSize: 13,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      Icon(
-                        Icons.calendar_today_rounded,
+                      const Icon(
+                        Icons.calendar_today,
                         size: 12,
-                        color: theme.colorScheme.primary,
+                        color: Colors.white,
                       ),
                       const SizedBox(width: 4),
                       Text(
                         diasTexto,
-                        style: theme.textTheme.labelMedium?.copyWith(
-                          color: theme.colorScheme.primary,
-                          fontWeight: FontWeight.bold,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ],
+                  ),
+                ] else ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    '${widget.areaLote} mz',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.8),
+                      fontSize: 13,
+                    ),
                   ),
                 ],
               ],
@@ -275,73 +288,70 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
   }
 
   // ═══════════════════════════════════════════════════════
-  //  DATE PICKER
+  //  MODERN DATE PICKER
   // ═══════════════════════════════════════════════════════
-
   Widget _buildDatePicker(ThemeData theme) {
-    return InkWell(
-      onTap: () async {
-        final date = await showDatePicker(
-          context: context,
-          initialDate: _fechaSeleccionada,
-          firstDate: DateTime(2020),
-          lastDate: DateTime.now(),
-        );
-        if (date != null) {
-          setState(() => _fechaSeleccionada = date);
-        }
-      },
-      borderRadius: BorderRadius.circular(14),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        decoration: BoxDecoration(
-          color: theme.colorScheme.surfaceContainerLowest,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: theme.colorScheme.outlineVariant.withOpacity(0.5),
+    return Card(
+      elevation: 0,
+      color: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: InkWell(
+        onTap: () async {
+          final date = await showDatePicker(
+            context: context,
+            initialDate: _fechaSeleccionada,
+            firstDate: DateTime(2020),
+            lastDate: DateTime.now(),
+          );
+          if (date != null) setState(() => _fechaSeleccionada = date);
+        },
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.accent.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.calendar_month_rounded,
+                  color: AppColors.accent,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Fecha del Evento',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: Colors.grey,
+                    ),
+                  ),
+                  Text(
+                    _formatDateDisplay(_fechaSeleccionada),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
+              ),
+              const Spacer(),
+              const Icon(Icons.edit_rounded, color: Colors.grey, size: 20),
+            ],
           ),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              Icons.calendar_month_rounded,
-              color: theme.colorScheme.primary,
-              size: 22,
-            ),
-            const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Fecha del Evento',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                Text(
-                  _formatDateDisplay(_fechaSeleccionada),
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-            const Spacer(),
-            Icon(
-              Icons.edit_rounded,
-              size: 18,
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ],
         ),
       ),
     );
   }
 
   // ═══════════════════════════════════════════════════════
-  //  CAMPOS DINÁMICOS
+  //  DYNAMIC FIELDS
   // ═══════════════════════════════════════════════════════
-
   List<Widget> _buildDynamicFields(
     TipoEvento paso,
     CicloProduccion? ciclo,
@@ -351,49 +361,29 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
     switch (paso) {
       case TipoEvento.siembra:
         return [
-          // Fecha
-          _buildDatePicker(theme),
-          const SizedBox(height: 16),
-          _buildSiembraFields(),
-          const SizedBox(height: 32),
+          _buildCardSection(
+            title: 'Datos de Siembra',
+            icon: Icons.eco_rounded,
+            child: _buildSiembraFields(),
+          ),
+          const SizedBox(height: 24),
           _buildSubmitButton(paso, ciclo, isLoading),
         ];
 
       case TipoEvento.encintado:
-        // Layout:
-        // 1. Lista de Encintados existentes
-        // 2. Botón "Agregar Encintado" (o Formulario)
-        // 3. Botón "Ir a Cosecha"
         return [
           _buildEncintadoHistory(theme, ciclo),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
 
           if (_showEncintadoForm || (ciclo?.encintados.isEmpty ?? true))
             Column(
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Divider(color: theme.colorScheme.outlineVariant),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: Text(
-                        "Nuevo Encintado",
-                        style: theme.textTheme.labelLarge,
-                      ),
-                    ),
-                    Expanded(
-                      child: Divider(color: theme.colorScheme.outlineVariant),
-                    ),
-                  ],
+                _buildCardSection(
+                  title: 'Nuevo Encintado',
+                  icon: Icons.add_circle_outline_rounded,
+                  child: _buildEncintadoFields(theme, ciclo),
                 ),
-                const SizedBox(height: 16),
-                _buildDatePicker(theme),
-                const SizedBox(height: 16),
-                _buildEncintadoFields(theme, ciclo),
-                const SizedBox(height: 24),
-                // Botones Guardar / Cancelar
+                const SizedBox(height: 20),
                 Row(
                   children: [
                     if ((ciclo?.encintados.isNotEmpty ?? false))
@@ -401,6 +391,12 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
                         child: OutlinedButton(
                           onPressed: () =>
                               setState(() => _showEncintadoForm = false),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
                           child: const Text('Cancelar'),
                         ),
                       ),
@@ -419,19 +415,20 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
               children: [
                 SizedBox(
                   width: double.infinity,
-                  height: 50,
+                  height: 56,
                   child: OutlinedButton.icon(
                     onPressed: () => setState(() => _showEncintadoForm = true),
                     icon: const Icon(Icons.add),
-                    label: const Text('Agregar Encintado'),
+                    label: const Text('Agregar Nuevo Encintado'),
                     style: OutlinedButton.styleFrom(
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(14),
                       ),
+                      side: const BorderSide(color: AppColors.primary),
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
                 _buildActionToCosecha(theme, ciclo),
               ],
             ),
@@ -439,14 +436,53 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
 
       case TipoEvento.cosecha:
         return [
-          // Fecha
-          _buildDatePicker(theme),
-          const SizedBox(height: 16),
-          _buildCosechaFields(theme, ciclo),
-          const SizedBox(height: 32),
+          _buildCardSection(
+            title: 'Registro de Cosecha',
+            icon: Icons.agriculture_rounded,
+            child: _buildCosechaFields(theme, ciclo),
+          ),
+          const SizedBox(height: 24),
           _buildSubmitButton(paso, ciclo, isLoading),
         ];
+
+      case TipoEvento.entrega:
+        return [];
     }
+  }
+
+  Widget _buildCardSection({
+    required String title,
+    required IconData icon,
+    required Widget child,
+  }) {
+    return Card(
+      elevation: 0,
+      color: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, size: 20, color: AppColors.primary),
+                const SizedBox(width: 8),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+              ],
+            ),
+            const Divider(height: 24),
+            child,
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildSiembraFields() {
@@ -461,13 +497,10 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
           readOnly: isAreaLocked,
           enabled: !isAreaLocked,
           decoration: InputDecoration(
-            labelText: 'Área',
+            labelText: 'Área a Sembrar',
             hintText: 'Ej: 2.5',
-            prefixIcon: const Icon(Icons.square_foot_rounded),
             suffixText: 'mz',
-            suffixIcon: isAreaLocked
-                ? const Icon(Icons.lock_rounded, size: 18, color: Colors.grey)
-                : null,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             filled: isAreaLocked,
           ),
           validator: (v) {
@@ -480,38 +513,30 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
         const SizedBox(height: 16),
         variedadesAsync.when(
           data: (variedades) {
-            // Asegurar unicidad por nombre
             final items = variedades.map((v) => v.nombre).toSet().toList();
-            // Validar si el valor actual está en la lista
             final currentValue = items.contains(_variedadController.text)
                 ? _variedadController.text
                 : null;
-
             return DropdownButtonFormField<String>(
               value: currentValue,
               items: items
                   .map((v) => DropdownMenuItem(value: v, child: Text(v)))
                   .toList(),
               onChanged: (val) {
-                if (val != null) {
-                  setState(() {
-                    _variedadController.text = val;
-                  });
-                }
+                if (val != null) setState(() => _variedadController.text = val);
               },
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Variedad',
-                prefixIcon: Icon(Icons.eco_rounded),
-                filled: false,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
-              validator: (v) {
-                if (v == null || v.isEmpty) return 'Seleccione la variedad';
-                return null;
-              },
+              validator: (v) =>
+                  (v == null || v.isEmpty) ? 'Seleccione la variedad' : null,
             );
           },
           loading: () => const LinearProgressIndicator(),
-          error: (e, s) => Text(
+          error: (_, __) => const Text(
             'Error cargando variedades',
             style: TextStyle(color: Colors.red),
           ),
@@ -523,84 +548,108 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
   Widget _buildEncintadoHistory(ThemeData theme, CicloProduccion? ciclo) {
     if (ciclo == null || ciclo.encintados.isEmpty) {
       return Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: theme.colorScheme.surfaceContainerLowest,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: theme.colorScheme.outlineVariant.withOpacity(0.5),
-          ),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.shade200),
         ),
-        child: Text(
-          'No hay encintados registrados aún.',
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-            fontStyle: FontStyle.italic,
-          ),
+        child: Column(
+          children: [
+            Icon(Icons.history, color: Colors.grey.shade300, size: 48),
+            const SizedBox(height: 8),
+            Text(
+              'No hay encintados registrados',
+              style: TextStyle(color: Colors.grey.shade500),
+            ),
+          ],
         ),
       );
     }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Encintados Registrados', style: theme.textTheme.titleSmall),
-        const SizedBox(height: 8),
-        ListView.separated(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: ciclo.encintados.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 8),
-          itemBuilder: (context, index) {
-            final item = ciclo.encintados[index];
-            return Container(
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surface,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: theme.colorScheme.outlineVariant.withOpacity(0.4),
-                ),
+    return Card(
+      elevation: 0,
+      color: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Historial de Encintados',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            const SizedBox(height: 16),
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: ciclo.encintados.length,
+              separatorBuilder: (_, __) => const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8.0),
+                child: Divider(height: 1),
               ),
-              child: ListTile(
-                leading: Container(
-                  width: 24,
-                  height: 24,
-                  decoration: BoxDecoration(
-                    color: _parseColor(item.cintaColorHex),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: theme.colorScheme.primaryContainer,
+              itemBuilder: (context, index) {
+                final item = ciclo.encintados[index];
+                return Row(
+                  children: [
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: _parseColor(item.cintaColorHex),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.black12),
+                      ),
                     ),
-                  ),
-                ),
-                title: Text('${item.cintaNombre} · ${item.cantidad} uds'),
-                subtitle: Text(_formatDateDisplay(item.fecha)),
-                trailing: const Icon(
-                  Icons.check_circle_outline,
-                  size: 18,
-                  color: Colors.green,
-                ),
-              ),
-            );
-          },
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${item.cintaNombre} · ${item.cantidad} uds',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          Text(
+                            _formatDateDisplay(item.fecha),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(
+                      Icons.check_circle,
+                      color: Colors.green,
+                      size: 20,
+                    ),
+                  ],
+                );
+              },
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 
   Widget _buildEncintadoFields(ThemeData theme, CicloProduccion? ciclo) {
     final cintasAsync = ref.watch(cintasStreamProvider);
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Seleccione Color de Cinta', style: theme.textTheme.titleSmall),
+        const Text(
+          'Color de Cinta',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
         const SizedBox(height: 12),
         cintasAsync.when(
           data: (cintas) {
             if (cintas.isEmpty) {
-              return const Text('No hay colores de cinta configurados.');
+              return const Text('No hay colores configurados');
             }
             return Wrap(
               spacing: 12,
@@ -609,44 +658,46 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
                 final isSelected = _cintaSeleccionada?.id == cinta.id;
                 return GestureDetector(
                   onTap: () => setState(() => _cintaSeleccionada = cinta),
-                  child: Container(
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
+                      horizontal: 16,
+                      vertical: 10,
                     ),
                     decoration: BoxDecoration(
                       color: isSelected
-                          ? theme.colorScheme.primaryContainer
-                          : theme.colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(8),
+                          ? AppColors.primary.withValues(alpha: 0.1)
+                          : Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: isSelected
-                            ? theme.colorScheme.primary
-                            : Colors.transparent,
-                        width: 2,
+                            ? AppColors.primary
+                            : Colors.grey.shade300,
+                        width: isSelected ? 2 : 1,
                       ),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Container(
-                          width: 16,
-                          height: 16,
+                          width: 14,
+                          height: 14,
                           decoration: BoxDecoration(
                             color: _parseColor(cinta.colorHex),
                             shape: BoxShape.circle,
-                            border: Border.all(
-                              color: theme.colorScheme.outline.withOpacity(0.2),
-                            ),
+                            border: Border.all(color: Colors.black12),
                           ),
                         ),
                         const SizedBox(width: 8),
                         Text(
                           cinta.color,
-                          style: theme.textTheme.bodyMedium?.copyWith(
+                          style: TextStyle(
                             fontWeight: isSelected
                                 ? FontWeight.bold
                                 : FontWeight.normal,
+                            color: isSelected
+                                ? AppColors.primary
+                                : Colors.grey.shade700,
                           ),
                         ),
                       ],
@@ -657,24 +708,19 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
             );
           },
           loading: () => const CircularProgressIndicator(),
-          error: (e, s) => Text('Error al cargar cintas: $e'),
+          error: (_, __) => const Text('Error'),
         ),
         const SizedBox(height: 24),
         TextFormField(
           controller: _cantidadEncintadoController,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: const InputDecoration(
-            labelText: 'Cantidad Encintada (Unidades)',
-            hintText: 'Ej: 150',
-            prefixIcon: Icon(Icons.numbers_rounded),
-            suffixText: 'uds',
+          decoration: InputDecoration(
+            labelText: 'Cantidad (Unidades)',
+            prefixIcon: const Icon(Icons.numbers_rounded),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           ),
-          validator: (v) {
-            if (v == null || v.isEmpty) return 'Ingrese la cantidad';
-            final n = double.tryParse(v);
-            if (n == null || n <= 0) return 'Cantidad inválida';
-            return null;
-          },
+          validator: (v) =>
+              (double.tryParse(v ?? '') ?? 0) <= 0 ? 'Cantidad inválida' : null,
         ),
       ],
     );
@@ -685,7 +731,11 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
     final buffer = StringBuffer();
     if (hex.length == 6 || hex.length == 7) buffer.write('ff');
     buffer.write(hex.replaceFirst('#', ''));
-    return Color(int.parse(buffer.toString(), radix: 16));
+    try {
+      return Color(int.parse(buffer.toString(), radix: 16));
+    } catch (_) {
+      return Colors.grey;
+    }
   }
 
   Widget _buildActionToCosecha(ThemeData theme, CicloProduccion? ciclo) {
@@ -694,7 +744,6 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
       height: 56,
       child: FilledButton.icon(
         onPressed: () {
-          // Navegar a modo Cosecha
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -712,7 +761,7 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
         icon: const Icon(Icons.agriculture_rounded),
         label: const Text('Finalizar Ciclo / Cosechar'),
         style: FilledButton.styleFrom(
-          backgroundColor: AppColors.estadoCosechado, // Green
+          backgroundColor: AppColors.estadoCosechado,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
@@ -722,26 +771,23 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
   }
 
   Widget _buildCosechaFields(ThemeData theme, CicloProduccion? ciclo) {
-    // Total encintado
     final totalEncintado = ciclo?.totalEncintado ?? 0;
-
     return Column(
       children: [
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: theme.colorScheme.primaryContainer.withOpacity(0.3),
+            color: AppColors.accent.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Row(
             children: [
-              const Icon(Icons.info_outline_rounded),
+              const Icon(Icons.info_outline, color: AppColors.accent),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  'Total Encintado: ${totalEncintado.toStringAsFixed(2)} uds\n'
-                  'Ingrese la cantidad de unidades (racimos/bultos) cosechadas.',
-                  style: theme.textTheme.bodyMedium,
+                  'Total Encintado: ${totalEncintado.toStringAsFixed(2)} uds\nRegistre lo que realmente se cosechó.',
+                  style: const TextStyle(color: AppColors.textPrimary),
                 ),
               ),
             ],
@@ -749,31 +795,20 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
         ),
         const SizedBox(height: 24),
         TextFormField(
-          controller: _cantidadEncintadoController,
+          controller: _cantidadEncintadoController, // Reused controller
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: const InputDecoration(
-            labelText: 'Cantidad Cosechada REAL',
-            hintText: 'Ej: 450',
-            prefixIcon: Icon(Icons.agriculture_rounded),
-            suffixText: 'unidades',
+          decoration: InputDecoration(
+            labelText: 'Cantidad Cosechada',
+            suffixText: 'uds',
+            prefixIcon: const Icon(Icons.agriculture),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           ),
-          onChanged: (v) {
-            setState(() {});
-          },
-          validator: (v) {
-            if (v == null || v.isEmpty) return 'Ingrese la cantidad';
-            final n = double.tryParse(v);
-            if (n == null || n <= 0) return 'Cantidad inválida';
-            return null;
-          },
+          validator: (v) =>
+              (double.tryParse(v ?? '') ?? 0) <= 0 ? 'Cantidad inválida' : null,
         ),
       ],
     );
   }
-
-  // ═══════════════════════════════════════════════════════
-  //  BOTÓN SUBMIT
-  // ═══════════════════════════════════════════════════════
 
   Widget _buildSubmitButton(
     TipoEvento paso,
@@ -788,13 +823,18 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
       ),
       TipoEvento.encintado => (
         'Guardar Encintado',
-        Icons.bookmark_rounded,
+        Icons.save_rounded,
         AppColors.estadoEncintado,
       ),
       TipoEvento.cosecha => (
         'Registrar Cosecha',
         Icons.agriculture_rounded,
         AppColors.estadoCosechado,
+      ),
+      TipoEvento.entrega => (
+        'Registrar Entrega',
+        Icons.local_shipping,
+        AppColors.estadoEntregado,
       ),
     };
 
@@ -806,20 +846,20 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
             ? const SizedBox(
                 width: 20,
                 height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
               )
             : Icon(icon),
-        label: Text(label),
+        label: Text(
+          label,
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
         style: FilledButton.styleFrom(
           backgroundColor: color,
-          foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
-          ),
-          textStyle: const TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
           ),
         ),
       ),
@@ -830,50 +870,35 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
     return Center(
       child: Column(
         children: [
-          const SizedBox(height: 32),
-          Container(
-            width: 72,
-            height: 72,
-            decoration: BoxDecoration(
-              color: AppColors.estadoCosechado.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.check_circle_rounded,
-              size: 40,
-              color: AppColors.estadoCosechado,
-            ),
+          const SizedBox(height: 40),
+          Icon(
+            Icons.check_circle_outline,
+            size: 80,
+            color: Colors.grey.shade300,
           ),
-          const SizedBox(height: 20),
-          Text(
+          const SizedBox(height: 16),
+          const Text(
             'Sin ciclos activos',
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
-          const SizedBox(height: 8),
-          Text(
-            'Puede iniciar una nueva Siembra\npara este lote.',
-            textAlign: TextAlign.center,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
+          const Text(
+            'Este lote está libre para siembra.',
+            style: TextStyle(color: Colors.grey),
           ),
         ],
       ),
     );
   }
 
-  // ═══════════════════════════════════════════════════════
-  //  SUBMIT LOGIC
-  // ═══════════════════════════════════════════════════════
+  // ─────────────────────────────────────────────────────────
+  //  LOGIC
+  // ─────────────────────────────────────────────────────────
 
   Future<void> _submit(TipoEvento paso, CicloProduccion? ciclo) async {
     if (!_formKey.currentState!.validate()) return;
 
     final authState = ref.read(authStateStreamProvider);
     final uidUsuario = authState.asData?.value?.uid ?? 'unknown';
-
     final notifier = ref.read(
       produccionNotifierProvider(widget.productoraId).notifier,
     );
@@ -889,78 +914,59 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
         );
       case TipoEvento.encintado:
         if (ciclo == null) return;
-
-        // ─── VALIDATION ───
         if (_cintaSeleccionada == null) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Seleccione un color de cinta'),
-              backgroundColor: AppColors.estadoCancelado,
+              backgroundColor: Colors.red,
             ),
           );
           return;
         }
-
-        final cantidad =
-            double.tryParse(_cantidadEncintadoController.text.trim()) ?? 0;
-        if (cantidad <= 0) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('La cantidad debe ser mayor a 0'),
-              backgroundColor: AppColors.estadoCancelado,
-            ),
-          );
-          return;
-        }
-
-        // ─── EXECUTION ───
         await notifier.registrarEncintado(
           idCiclo: ciclo.id,
           cintaId: _cintaSeleccionada!.id,
           cintaNombre: _cintaSeleccionada!.color,
           cintaColorHex: _cintaSeleccionada!.colorHex,
-          cantidad: cantidad,
+          cantidad: double.parse(_cantidadEncintadoController.text),
           fecha: _fechaSeleccionada,
           uidUsuario: uidUsuario,
         );
-      // Si el éxito se maneja en el listener, aquí no hacemos mucho más
-
       case TipoEvento.cosecha:
         if (ciclo == null) return;
         await notifier.registrarCosecha(
           idCiclo: ciclo.id,
-          cantidad: double.parse(
-            _cantidadEncintadoController.text,
-          ), // Use correct controller
+          cantidad: double.parse(_cantidadEncintadoController.text),
           uidUsuario: uidUsuario,
         );
+      case TipoEvento.entrega:
+        break;
     }
   }
 
-  String _tituloFormulario(TipoEvento? paso) {
-    return switch (paso) {
-      TipoEvento.siembra => 'Nueva Siembra',
-      TipoEvento.encintado => 'Gestionar Encintado',
-      TipoEvento.cosecha => 'Registrar Cosecha',
-      null => widget.nombreLote,
-    };
-  }
+  String _tituloFormulario(TipoEvento? paso) => switch (paso) {
+    TipoEvento.siembra => 'Nueva Siembra',
+    TipoEvento.encintado => 'Gestionar Encintado',
+    TipoEvento.cosecha => 'Registrar Cosecha',
+    TipoEvento.entrega => 'Registrar Entrega',
+    null => widget.nombreLote,
+  };
 
   String _formatDateDisplay(DateTime date) {
     const meses = [
-      'Enero',
-      'Febrero',
-      'Marzo',
-      'Abril',
-      'Mayo',
-      'Junio',
-      'Julio',
-      'Agosto',
-      'Septiembre',
-      'Octubre',
-      'Noviembre',
-      'Diciembre',
+      'Ene',
+      'Feb',
+      'Mar',
+      'Abr',
+      'May',
+      'Jun',
+      'Jul',
+      'Ago',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dic',
     ];
-    return '${date.day} de ${meses[date.month - 1]}, ${date.year}';
+    return '${date.day} ${meses[date.month - 1]}, ${date.year}';
   }
 }
