@@ -196,7 +196,35 @@ class AdministracionRepositoryImpl implements IAdministracionRepository {
 
   @override
   Future<void> deleteFinca(String id) async {
-    await _firestore.collection('fincas').doc(id).delete();
+    // Implementación de borrado en cascada: Finca -> Lotes -> Ciclos
+    final batch = _firestore.batch();
+
+    // 1. Obtener Lotes de la Finca
+    final lotesSnap = await _firestore
+        .collection('lotes')
+        .where('fincaId', isEqualTo: id)
+        .get();
+
+    for (var loteDoc in lotesSnap.docs) {
+      // 2. Para cada lote, obtener sus Ciclos de Producción
+      final ciclosSnap = await _firestore
+          .collection('ciclos_produccion')
+          .where('id_lote', isEqualTo: loteDoc.id)
+          .get();
+
+      // 3. Eliminar Ciclos
+      for (var cicloDoc in ciclosSnap.docs) {
+        batch.delete(cicloDoc.reference);
+      }
+
+      // 4. Eliminar Lote
+      batch.delete(loteDoc.reference);
+    }
+
+    // 5. Eliminar la Finca
+    batch.delete(_firestore.collection('fincas').doc(id));
+
+    await batch.commit();
   }
 
   // --- Lotes ---
@@ -262,6 +290,23 @@ class AdministracionRepositoryImpl implements IAdministracionRepository {
 
   @override
   Future<void> deleteLote(String id) async {
-    await _firestore.collection('lotes').doc(id).delete();
+    // Implementación de borrado en cascada: Lote -> Ciclos
+    final batch = _firestore.batch();
+
+    // 1. Obtener Ciclos del Lote
+    final ciclosSnap = await _firestore
+        .collection('ciclos_produccion')
+        .where('id_lote', isEqualTo: id)
+        .get();
+
+    // 2. Eliminar Ciclos
+    for (var cicloDoc in ciclosSnap.docs) {
+      batch.delete(cicloDoc.reference);
+    }
+
+    // 3. Eliminar Lote
+    batch.delete(_firestore.collection('lotes').doc(id));
+
+    await batch.commit();
   }
 }
