@@ -7,7 +7,8 @@ import '../../domain/entities/ciclo_produccion.dart';
 import '../../domain/entities/produccion_enums.dart';
 
 import '../../../administracion/domain/entities/cinta.dart';
-import 'ciclo_history_screen.dart';
+import 'lote_history_screen.dart';
+import '../../../administracion/presentation/screens/cintas_screen.dart';
 
 /// Formulario premium para registrar eventos del ciclo (Siembra, Encintado, Cosecha).
 /// Re-diseñado con estilo "Card-based" profesional.
@@ -147,7 +148,11 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => CicloHistoryScreen(ciclo: ciclo),
+                    builder: (_) => LoteHistoryScreen(
+                      productoraId: widget.productoraId,
+                      loteId: widget.idLote,
+                      nombreLote: widget.nombreLote,
+                    ),
                   ),
                 );
               },
@@ -487,26 +492,31 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
 
   Widget _buildSiembraFields() {
     final variedadesAsync = ref.watch(variedadesStreamProvider);
-    final bool isAreaLocked = widget.areaLote != null;
-
     return Column(
       children: [
         TextFormField(
           controller: _areaController,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          readOnly: isAreaLocked,
-          enabled: !isAreaLocked,
+          // Permitir edición siempre, incluso si viene el área del lote
+          readOnly: false,
+          enabled: true,
           decoration: InputDecoration(
             labelText: 'Área a Sembrar',
             hintText: 'Ej: 2.5',
             suffixText: 'mz',
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            filled: isAreaLocked,
+            filled: false,
           ),
           validator: (v) {
             if (v == null || v.isEmpty) return 'Ingrese el área';
             final n = double.tryParse(v);
             if (n == null || n <= 0) return 'Área inválida';
+
+            // Validar que no sobrepase el área del lote
+            if (widget.areaLote != null && n > widget.areaLote!) {
+              return 'Máximo ${widget.areaLote} mz';
+            }
+
             return null;
           },
         ),
@@ -638,12 +648,28 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
 
   Widget _buildEncintadoFields(ThemeData theme, CicloProduccion? ciclo) {
     final cintasAsync = ref.watch(cintasStreamProvider);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Color de Cinta',
-          style: TextStyle(fontWeight: FontWeight.w600),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Color de Cinta',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            TextButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const CintasScreen()),
+                );
+              },
+              icon: const Icon(Icons.add_circle_outline, size: 18),
+              label: const Text('Gestionar Cintas'),
+            ),
+          ],
         ),
         const SizedBox(height: 12),
         cintasAsync.when(
