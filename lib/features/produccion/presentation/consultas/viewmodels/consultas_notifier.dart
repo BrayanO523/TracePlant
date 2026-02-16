@@ -333,11 +333,15 @@ class ConsultasNotifier extends StateNotifier<ConsultasState> {
             : state.inventario) {
       final fecha = ciclo.proyeccionCosecha(semanas);
       if (fecha != null) {
+        // Normalizar a medianoche para cálculo exacto de días calendario
+        final today = DateTime(now.year, now.month, now.day);
+        final projectedDate = DateTime(fecha.year, fecha.month, fecha.day);
+
         proyecciones.add(
           ProximaCosechaLocal(
             ciclo: ciclo,
             fechaProyectada: fecha,
-            diasRestantes: fecha.difference(now).inDays,
+            diasRestantes: projectedDate.difference(today).inDays,
           ),
         );
       }
