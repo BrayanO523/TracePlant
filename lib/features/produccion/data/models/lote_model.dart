@@ -26,7 +26,11 @@ class LoteModel extends Lote {
       fincaId: data['fincaId'] ?? '',
       estado: _parseEstadoLote(data['estado'] as String?),
       colorCinta: ColorCinta.fromString(data['color_cinta'] as String?),
-      idProductora: data['productoraId'] as String? ?? '',
+      // Soportar ambas claves por inconsistencia detectada
+      idProductora:
+          data['productoraId'] as String? ??
+          data['id_productora'] as String? ??
+          '',
       fechaCreacion: (data['fecha_creacion'] as Timestamp?)?.toDate(),
       fechaActualizacion: (data['fecha_actualizacion'] as Timestamp?)?.toDate(),
     );
@@ -40,7 +44,10 @@ class LoteModel extends Lote {
       'id_finca': fincaId,
       'estado': estado.name,
       'color_cinta': colorCinta?.name,
-      'id_productora': idProductora,
+      'id_productora':
+          idProductora, // Mantenemos consistencia con id_productora para nuevos
+      'productoraId':
+          idProductora, // Guardamos ambos para compatibilidad temporal
       'fecha_actualizacion': FieldValue.serverTimestamp(),
     };
   }
@@ -51,9 +58,13 @@ class LoteModel extends Lote {
 
   static EstadoLote _parseEstadoLote(String? value) {
     if (value == null) return EstadoLote.libre;
-    return EstadoLote.values.firstWhere(
-      (e) => e.name == value,
-      orElse: () => EstadoLote.libre,
-    );
+    try {
+      return EstadoLote.values.firstWhere(
+        (e) => e.name.toLowerCase() == value.toLowerCase(),
+        orElse: () => EstadoLote.libre,
+      );
+    } catch (_) {
+      return EstadoLote.libre;
+    }
   }
 }
