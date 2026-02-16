@@ -118,7 +118,7 @@ class AppColors {
   //  GRADIENTES
   // ═══════════════════════════════════════════════════════
 
-  /// Gradiente principal del login y splash
+  /// Gradiente principal (oscuro arriba → claro abajo)
   static const LinearGradient primaryGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
@@ -128,6 +128,22 @@ class AppColors {
       Color(0xFF388E3C),
       Color(0xFF43A047),
     ],
+  );
+
+  /// Gradiente del login (claro arriba → oscuro abajo)
+  /// El verde suave en la parte superior permite que el logo se vea nítido.
+  static const LinearGradient loginGradient = LinearGradient(
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    colors: [
+      Color(0xFFE8F5E9), // Verde muy suave (casi blanco)
+      Color(0xFFC8E6C9), // Verde suave
+      Color(0xFFA5D6A7), // Verde claro
+      Color(0xFF4CAF50), // Verde medio
+      Color(0xFF2E7D32), // Verde bosque
+      Color(0xFF1B5E20), // Verde oscuro
+    ],
+    stops: [0.0, 0.3, 0.5, 0.7, 0.85, 1.0],
   );
 
   /// Gradiente para cards destacadas

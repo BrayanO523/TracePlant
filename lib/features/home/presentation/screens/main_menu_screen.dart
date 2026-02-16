@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:productoraempacadora/core/constants/role_constants.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../auth/presentation/views/auth_gate.dart';
 import '../../../administracion/presentation/screens/admin_dashboard_screen.dart';
@@ -7,194 +8,229 @@ import '../../../produccion/presentation/views/produccion_dashboard_screen.dart'
 import '../../../produccion/presentation/consultas/views/consultas_screen.dart';
 import '../../../productora/presentation/views/productora_settings_screen.dart';
 import '../../../../app/di/providers.dart';
+import '../widgets/quick_actions_bar.dart'; // Ruta corregida: subir un nivel desde screens/
 
 class MainMenuScreen extends ConsumerWidget {
   const MainMenuScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Escuchamos el usuario para obtener ID de productora
+    final userAsync = ref.watch(currentUserStreamProvider);
+    final appUser = userAsync.value;
+    final productoraId = appUser?.companyId;
+
+    // Validar si podemos mostrar acciones rápidas (solo si tiene companyId y rol productora)
+    final showQuickActions =
+        productoraId != null &&
+        productoraId.isNotEmpty &&
+        appUser?.role == UserRole.productora;
+
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
-        child: SafeArea(
-          child: Column(
-            children: [
-              // --- Header ---
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'TracePlant',
-                          style: TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white,
-                            letterSpacing: 1,
-                          ),
-                        ),
-                        SizedBox(height: 4),
-                        Text(
-                          'Menú Principal',
-                          style: TextStyle(fontSize: 14, color: Colors.white70),
-                        ),
-                      ],
-                    ),
-                    IconButton(
-                      icon: const Icon(
-                        Icons.settings_rounded,
-                        color: Colors.white70,
-                      ),
-                      tooltip: 'Ajustes de Empresa',
-                      onPressed: () {
-                        final appUser = ref
-                            .read(currentUserStreamProvider)
-                            .value;
-                        final productoraId = appUser?.companyId;
-                        if (productoraId != null && productoraId.isNotEmpty) {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => ProductoraSettingsScreen(
-                                productoraId: productoraId,
-                              ),
-                            ),
-                          );
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Error: No se encontró la empresa'),
-                            ),
-                          );
-                        }
-                      },
-                    ),
-                    IconButton(
-                      icon: const Icon(
-                        Icons.logout_rounded,
-                        color: Colors.white70,
-                      ),
-                      tooltip: 'Cerrar Sesión',
-                      onPressed: () async {
-                        await ref.read(authNotifierProvider.notifier).signOut();
-                        if (context.mounted) {
-                          Navigator.of(context).pushAndRemoveUntil(
-                            MaterialPageRoute(builder: (_) => const AuthGate()),
-                            (route) => false,
-                          );
-                        }
-                      },
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 40),
-
-              // --- Menu Cards ---
-              Expanded(
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.fromLTRB(20, 32, 20, 20),
-                  decoration: const BoxDecoration(
-                    color: AppColors.background,
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(32),
-                    ),
-                  ),
-                  child: SingleChildScrollView(
-                    child: Column(
-                      children: [
-                        _MenuCard(
-                          icon: Icons.admin_panel_settings_rounded,
-                          label: 'Administración',
-                          subtitle: 'Fincas, Lotes, Cintas, Variedades',
-                          color: AppColors.info,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const AdminDashboardScreen(),
-                              ),
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        _MenuCard(
-                          icon: Icons.eco_rounded,
-                          label: 'Producción',
-                          subtitle: 'Siembra, Encintado, Cosecha',
-                          color: AppColors.primary,
-                          onTap: () {
-                            final appUser = ref
-                                .read(currentUserStreamProvider)
-                                .value;
-                            final productoraId = appUser?.companyId;
-                            if (productoraId != null &&
-                                productoraId.isNotEmpty) {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => ProduccionDashboardScreen(
-                                    productoraId: productoraId,
-                                  ),
-                                ),
-                              );
-                            } else {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Error: No se encontró la empresa productora asociada',
-                                  ),
-                                ),
-                              );
-                            }
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        _MenuCard(
-                          icon: Icons.analytics_rounded,
-                          label: 'Consultas',
-                          subtitle: 'Historial y filtros avanzados',
-                          color: AppColors.secondary,
-                          onTap: () {
-                            final appUser = ref
-                                .read(currentUserStreamProvider)
-                                .value;
-                            final productoraId = appUser?.companyId;
-                            if (productoraId != null &&
-                                productoraId.isNotEmpty) {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => ConsultasScreen(
-                                    productoraId: productoraId,
-                                  ),
-                                ),
-                              );
-                            } else {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Error: No se encontró la empresa productora asociada',
-                                  ),
-                                ),
-                              );
-                            }
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
+      backgroundColor: AppColors.surface, // Fondo base
+      body: Stack(
+        children: [
+          // Fondo gradiente superior
+          Container(
+            height: MediaQuery.of(context).size.height * 0.4,
+            decoration: const BoxDecoration(
+              gradient: AppColors.primaryGradient,
+            ),
           ),
-        ),
+
+          SafeArea(
+            child: Column(
+              children: [
+                // --- Header ---
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'TracePlant',
+                            style: TextStyle(
+                              fontSize: 26,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            'Menú Principal',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.white70,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(
+                              Icons.settings_rounded,
+                              color: Colors.white70,
+                            ),
+                            tooltip: 'Ajustes',
+                            onPressed: () {
+                              if (productoraId != null &&
+                                  productoraId.isNotEmpty) {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => ProductoraSettingsScreen(
+                                      productoraId: productoraId,
+                                    ),
+                                  ),
+                                );
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Sin empresa asignada'),
+                                  ),
+                                );
+                              }
+                            },
+                          ),
+                          IconButton(
+                            icon: const Icon(
+                              Icons.logout_rounded,
+                              color: Colors.white70,
+                            ),
+                            tooltip: 'Salir',
+                            onPressed: () async {
+                              await ref
+                                  .read(authNotifierProvider.notifier)
+                                  .signOut();
+                              if (context.mounted) {
+                                Navigator.of(context).pushAndRemoveUntil(
+                                  MaterialPageRoute(
+                                    builder: (_) => const AuthGate(),
+                                  ),
+                                  (route) => false,
+                                );
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                // --- Menu Cards (Scrollable) ---
+                Expanded(
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      color: AppColors.background,
+                      borderRadius: BorderRadius.vertical(
+                        top: Radius.circular(30),
+                      ),
+                    ),
+                    clipBehavior: Clip
+                        .antiAlias, // Para que el scroll no se salga de las esquinas redondeadas
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(
+                        20,
+                        30,
+                        20,
+                        100,
+                      ), // Espacio extra abajo para quick actions
+                      child: Column(
+                        children: [
+                          _MenuCard(
+                            icon: Icons.admin_panel_settings_rounded,
+                            label: 'Administración',
+                            subtitle: 'Fincas, Lotes, Cintas, Variedades',
+                            color: AppColors.info,
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const AdminDashboardScreen(),
+                                ),
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          _MenuCard(
+                            icon: Icons.eco_rounded,
+                            label: 'Producción',
+                            subtitle: 'Siembra, Encintado, Cosecha',
+                            color: AppColors.primary,
+                            onTap: () {
+                              if (productoraId != null &&
+                                  productoraId.isNotEmpty) {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => ProduccionDashboardScreen(
+                                      productoraId: productoraId,
+                                    ),
+                                  ),
+                                );
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Error: No se encontró la empresa',
+                                    ),
+                                  ),
+                                );
+                              }
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          _MenuCard(
+                            icon: Icons.analytics_rounded,
+                            label: 'Consultas',
+                            subtitle: 'Historial y filtros avanzados',
+                            color: AppColors.secondary,
+                            onTap: () {
+                              if (productoraId != null &&
+                                  productoraId.isNotEmpty) {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => ConsultasScreen(
+                                      productoraId: productoraId,
+                                    ),
+                                  ),
+                                );
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Error: No se encontró la empresa',
+                                    ),
+                                  ),
+                                );
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // --- Quick Actions Bar (Bottom Fixed) ---
+          if (showQuickActions)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: QuickActionsBar(productoraId: productoraId!),
+            ),
+        ],
       ),
     );
   }

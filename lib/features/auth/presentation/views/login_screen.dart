@@ -78,7 +78,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
+        decoration: const BoxDecoration(gradient: AppColors.loginGradient),
         child: SafeArea(
           child: Center(
             child: SingleChildScrollView(
@@ -86,52 +86,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // --- Logo / Branding ---
-                  Container(
-                    width: 100,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.15),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.3),
-                        width: 2,
-                      ),
-                    ),
-                    child: const Icon(
-                      Icons.eco_rounded,
-                      size: 52,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // --- App Name ---
-                  const Text(
-                    'TracePlant',
-                    style: TextStyle(
-                      fontSize: 36,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white,
-                      letterSpacing: 1.5,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Optimizando el Inventario de Cultivos en Tiempo Real',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.white.withOpacity(0.8),
-                      letterSpacing: 0.5,
-                    ),
+                  // --- Logo TracePlant ---
+                  Image.asset(
+                    'assets/images/Logo TracePlant-04.png',
+                    width: 300,
+                    height: 300,
+                    fit: BoxFit.contain,
                   ),
 
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 10),
 
                   // --- Card del Formulario ---
                   Container(
                     constraints: const BoxConstraints(maxWidth: 400),
-                    padding: const EdgeInsets.all(28),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 20,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(24),
@@ -151,22 +122,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           Text(
                             'Iniciar Sesión',
                             style: TextStyle(
-                              fontSize: 22,
+                              fontSize: 20,
                               fontWeight: FontWeight.w700,
                               color: Colors.grey.shade800,
                             ),
                             textAlign: TextAlign.center,
                           ),
-                          const SizedBox(height: 6),
+                          const SizedBox(height: 4),
                           Text(
                             'Ingrese sus credenciales para continuar',
                             style: TextStyle(
-                              fontSize: 13,
+                              fontSize: 12,
                               color: Colors.grey.shade500,
                             ),
                             textAlign: TextAlign.center,
                           ),
-                          const SizedBox(height: 28),
+                          const SizedBox(height: 16),
 
                           // Email
                           TextFormField(
@@ -180,6 +151,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               ),
                               filled: true,
                               fillColor: Colors.grey.shade50,
+                              contentPadding: const EdgeInsets.symmetric(
+                                vertical: 12,
+                                horizontal: 12,
+                              ),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(14),
                                 borderSide: BorderSide(
@@ -205,7 +180,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 v!.isEmpty ? 'Campo requerido' : null,
                           ),
 
-                          const SizedBox(height: 18),
+                          const SizedBox(height: 12),
 
                           // Password
                           TextFormField(
@@ -231,6 +206,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               ),
                               filled: true,
                               fillColor: Colors.grey.shade50,
+                              contentPadding: const EdgeInsets.symmetric(
+                                vertical: 12,
+                                horizontal: 12,
+                              ),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(14),
                                 borderSide: BorderSide(
@@ -256,7 +235,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 v!.isEmpty ? 'Campo requerido' : null,
                           ),
 
-                          const SizedBox(height: 28),
+                          const SizedBox(height: 20),
 
                           // Login Button
                           if (isLoading)
@@ -272,7 +251,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 backgroundColor: AppColors.primary,
                                 foregroundColor: Colors.white,
                                 padding: const EdgeInsets.symmetric(
-                                  vertical: 16,
+                                  vertical: 14,
                                 ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(14),
@@ -289,7 +268,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               ),
                             ),
 
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 12),
 
                           TextButton(
                             onPressed: () {
@@ -325,7 +304,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                   ),
 
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 16),
 
                   // --- Footer ---
                   FutureBuilder<PackageInfo>(

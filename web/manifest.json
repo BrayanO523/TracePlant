@@ -1,11 +1,11 @@
 {
-    "name": "productoraempacadora",
-    "short_name": "productoraempacadora",
+    "name": "TracePlant",
+    "short_name": "TracePlant",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "TracePlant Application",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

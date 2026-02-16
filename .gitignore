@@ -54,3 +54,5 @@ windows/flutter/generated_plugins.cmake
 # Google Services
 google-services.json
 GoogleService-Info.plist
+
+.vscode/

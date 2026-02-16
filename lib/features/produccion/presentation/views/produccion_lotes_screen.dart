@@ -5,7 +5,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../domain/entities/produccion_enums.dart'; // Import para EstadoLote
 import '../widgets/lote_card.dart';
 import 'ciclo_form_screen.dart';
-import 'ciclo_history_screen.dart';
+import 'lote_history_screen.dart';
 
 class ProduccionLotesScreen extends ConsumerStatefulWidget {
   final String productoraId;
@@ -153,27 +153,17 @@ class _ProduccionLotesScreenState extends ConsumerState<ProduccionLotesScreen> {
                     onTap: () {
                       if (widget.readOnly) {
                         // Modo Lectura
-                        final produccionState = ref.read(
-                          produccionNotifierProvider(widget.productoraId),
+
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => LoteHistoryScreen(
+                              productoraId: widget.productoraId,
+                              loteId: lote.id,
+                              nombreLote: lote.nombre,
+                            ),
+                          ),
                         );
-                        final ciclosLote = produccionState.ciclos
-                            .where((c) => c.idLote == lote.id)
-                            .toList();
-                        if (ciclosLote.isNotEmpty) {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  CicloHistoryScreen(ciclo: ciclosLote.first),
-                            ),
-                          );
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Sin historial activo'),
-                            ),
-                          );
-                        }
                       } else {
                         // Modo Gestión
                         Navigator.push(
