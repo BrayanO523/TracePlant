@@ -72,7 +72,7 @@ class ProduccionRemoteDatasource {
           'estado',
           whereIn: ['sembrado', 'encintado', 'cosechado'],
         ) // SOLO activos
-        .orderBy('fecha_creacion', descending: true)
+        .orderBy('fecha_siembra', descending: true)
         .snapshots()
         .map(
           (snap) => snap.docs
@@ -91,7 +91,7 @@ class ProduccionRemoteDatasource {
     Query query = _ciclosRef()
         .where('id_productora', isEqualTo: productoraId)
         .where('estado', whereIn: ['entregado', 'cancelado']) // Solo inactivos
-        .orderBy('fecha_creacion', descending: true)
+        .orderBy('fecha_siembra', descending: true)
         .limit(limit);
 
     if (loteId != null) {
@@ -274,9 +274,10 @@ class ProduccionRemoteDatasource {
 
     final ciclo = CicloProduccionModel.fromFirestore(cicloDoc);
 
-    if (ciclo.estado != EstadoCiclo.encintado) {
+    if (ciclo.estado != EstadoCiclo.encintado &&
+        ciclo.estado != EstadoCiclo.sembrado) {
       throw const ValidationFailure(
-        'Solo se puede cosechar un ciclo en estado "Encintado"',
+        'Solo se puede cosechar un ciclo en estado "Sembrado" o "Encintado"',
       );
     }
 
