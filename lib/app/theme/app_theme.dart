@@ -58,7 +58,9 @@ class AppTheme {
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: AppColors.border.withOpacity(0.5)),
+          borderSide: BorderSide(
+            color: AppColors.border.withValues(alpha: 0.5),
+          ),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
@@ -69,7 +71,7 @@ class AppTheme {
           borderSide: const BorderSide(color: AppColors.error),
         ),
         labelStyle: const TextStyle(color: AppColors.textSecondary),
-        hintStyle: TextStyle(color: AppColors.textHint.withOpacity(0.7)),
+        hintStyle: TextStyle(color: AppColors.textHint.withValues(alpha: 0.7)),
       ),
 
       // ── Botones ──
