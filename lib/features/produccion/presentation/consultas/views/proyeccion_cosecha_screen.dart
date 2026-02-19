@@ -2,37 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../app/theme/app_colors.dart';
 
-import '../../widgets/ciclo_timeline.dart';
-import '../viewmodels/consultas_notifier.dart';
+import '../../../../administracion/domain/entities/finca.dart';
+import '../../../domain/entities/lote.dart';
+import '../../widgets/cohorte_card.dart'; // Import nuevo
+import '../../views/selectors/selector_filter_modal.dart';
+import '../viewmodels/consultas_notifier.dart'; // Import recuperado
 
 class ProyeccionCosechaScreen extends ConsumerWidget {
   final String productoraId;
 
   const ProyeccionCosechaScreen({super.key, required this.productoraId});
 
-  void _showCicloTimeline(BuildContext context, dynamic ciclo) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.85,
-        minChildSize: 0.5,
-        maxChildSize: 0.95,
-        builder: (_, controller) => Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          child: CicloTimeline(ciclo: ciclo),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(consultasProvider(productoraId));
+    // Usamos la nueva lista de cohortes
+    final cohortes = state.cohortes;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
@@ -48,6 +33,64 @@ class ProyeccionCosechaScreen extends ConsumerWidget {
         elevation: 0,
         iconTheme: const IconThemeData(color: AppColors.textPrimary),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.tune_rounded),
+            onPressed: () {
+              // Preparar datos para filtro
+              final variedades = state.lotes
+                  .map((l) => l.variedad)
+                  .where((v) => v.isNotEmpty)
+                  .toSet()
+                  .toList();
+              final fincas = state.fincas.map((f) => f.nombre).toSet().toList();
+              // Cintas: extraer de datos o hardcode? Mejor de la distribucion actual si es posible,
+              // o pasarlo vacio si no es critico, o extraer de ciclos.
+              // El state tiene inputs? state.ciclos tiene todo.
+              final cintas = state.ciclos
+                  .expand((c) => c.encintados.map((e) => e.cintaNombre))
+                  .toSet()
+                  .toList();
+
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (_) => SelectorFilterModal(
+                  variedades: variedades,
+                  cintas: cintas,
+                  fincas: fincas,
+                  sortAscending: state.sortAscending,
+                  startDate: state.fechaInicio,
+                  endDate: state.fechaFin,
+                  variedad: state.variedadFilter,
+                  cinta: state.cintaFilter,
+                  finca: state.fincaFilter,
+                  onApply:
+                      ({
+                        required sortAscending,
+                        startDate,
+                        endDate,
+                        variedad,
+                        cinta,
+                        finca,
+                      }) {
+                        ref
+                            .read(consultasProvider(productoraId).notifier)
+                            .setFilters(
+                              sortAscending: sortAscending,
+                              startDate: startDate,
+                              endDate: endDate,
+                              variedadFilter: variedad,
+                              cintaFilter: cinta,
+                              fincaFilter: finca,
+                            );
+                      },
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -60,7 +103,7 @@ class ProyeccionCosechaScreen extends ConsumerWidget {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: AppColors.accent.withOpacity(0.1),
+                    color: AppColors.accent.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Icon(
@@ -75,7 +118,7 @@ class ProyeccionCosechaScreen extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'Próximas Cosechas',
+                        'Proyección Semanal',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -83,7 +126,7 @@ class ProyeccionCosechaScreen extends ConsumerWidget {
                         ),
                       ),
                       Text(
-                        '${state.proximasCosechas.length} lotes · ${state.semanasParaCosecha} sem config.',
+                        '${cohortes.length} grupos programados · ${state.semanasParaCosecha} sem config.',
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.grey.shade500,
@@ -97,21 +140,21 @@ class ProyeccionCosechaScreen extends ConsumerWidget {
           ),
           const Divider(height: 1),
 
-          // Lista
+          // Lista de Cohortes
           Expanded(
-            child: state.proximasCosechas.isEmpty
+            child: cohortes.isEmpty
                 ? Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          Icons.event_busy_rounded,
+                          Icons.date_range_rounded,
                           size: 64,
                           color: Colors.grey.shade300,
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          'Sin cosechas proyectadas',
+                          'Sin proyección futura',
                           style: TextStyle(
                             color: Colors.grey.shade400,
                             fontSize: 16,
@@ -120,7 +163,7 @@ class ProyeccionCosechaScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'No hay ciclos encintados activos',
+                          'No hay encintados activos para proyectar',
                           style: TextStyle(
                             color: Colors.grey.shade300,
                             fontSize: 14,
@@ -131,165 +174,45 @@ class ProyeccionCosechaScreen extends ConsumerWidget {
                   )
                 : ListView.separated(
                     padding: const EdgeInsets.all(16),
-                    itemCount: state.proximasCosechas.length,
+                    itemCount: cohortes.length,
                     separatorBuilder: (_, __) => const SizedBox(height: 12),
                     itemBuilder: (context, index) {
-                      final p = state.proximasCosechas[index];
-                      return ProyeccionCard(
-                        proyeccion: p,
-                        onTap: () => _showCicloTimeline(context, p.ciclo),
+                      final item = cohortes[index];
+                      // Resolver Finca y Lote
+                      final lote = state.lotes.cast<Lote>().firstWhere(
+                        (l) => l.id == item.loteId,
+                        orElse: () => const Lote(
+                          id: '',
+                          nombre: 'Desconocido',
+                          fincaId: '',
+                          idProductora: '',
+                          area: 0,
+                          variedad: 'Desconocida',
+                        ),
+                      );
+                      final finca = state.fincas.cast<Finca>().firstWhere(
+                        (f) => f.id == lote.fincaId,
+                        orElse: () => const Finca(
+                          id: '',
+                          nombre: '',
+                          productoraId: '',
+                          ubicacion: '',
+                          areaTotal: 0,
+                        ),
+                      );
+
+                      return CohorteCard(
+                        cohorte: item,
+                        fincaNombre: finca.nombre,
+                        loteNombre: lote.nombre,
+                        onTap: () {
+                          // Futuro: Ver desglose por lote al tocar la cohorte
+                        },
                       );
                     },
                   ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// Card individual de proyección de cosecha.
-class ProyeccionCard extends StatelessWidget {
-  final ProximaCosechaLocal proyeccion;
-  final VoidCallback onTap;
-
-  const ProyeccionCard({
-    super.key,
-    required this.proyeccion,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final dias = proyeccion.diasRestantes;
-    final ciclo = proyeccion.ciclo;
-
-    // Determinar urgencia
-    final IconData urgencyIcon;
-    final String urgencyLabel;
-    final Color urgencyBg;
-    final Color urgencyFg;
-
-    if (dias < 0) {
-      urgencyIcon = Icons.warning_amber_rounded;
-      urgencyLabel = 'Vencido ${-dias}d';
-      urgencyBg = const Color(0xFFFFF0F0);
-      urgencyFg = const Color(0xFFD32F2F);
-    } else if (dias <= 14) {
-      urgencyIcon = Icons.schedule_rounded;
-      urgencyLabel = '$dias días';
-      urgencyBg = const Color(0xFFFFF8E1);
-      urgencyFg = const Color(0xFFE65100);
-    } else {
-      urgencyIcon = Icons.hourglass_bottom_rounded;
-      urgencyLabel = '$dias días';
-      urgencyBg = const Color(0xFFF0F4F8);
-      urgencyFg = const Color(0xFF546E7A);
-    }
-
-    final fechaStr =
-        '${proyeccion.fechaProyectada.day}/${proyeccion.fechaProyectada.month}/${proyeccion.fechaProyectada.year}';
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.grey.shade100),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.03),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              // Icono de calendario
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: AppColors.accent.withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  Icons.event_note_rounded,
-                  color: AppColors.accent,
-                  size: 22,
-                ),
-              ),
-              const SizedBox(width: 12),
-
-              // Info del lote
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      ciclo.nombreLote,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '${ciclo.variedad} · ${ciclo.totalEncintado.toStringAsFixed(0)} uds',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade500,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Est: $fechaStr',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey.shade400,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-
-              // Badge de urgencia
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: urgencyBg,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(urgencyIcon, size: 14, color: urgencyFg),
-                    const SizedBox(width: 4),
-                    Text(
-                      urgencyLabel,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: urgencyFg,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

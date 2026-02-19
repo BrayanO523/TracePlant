@@ -108,8 +108,9 @@ class _WeeklyProductionChart extends StatelessWidget {
             sideTitles: SideTitles(
               showTitles: true,
               getTitlesWidget: (value, meta) {
-                if (value < 0 || value >= displayKeys.length)
+                if (value < 0 || value >= displayKeys.length) {
                   return const SizedBox.shrink();
+                }
                 final key = displayKeys[value.toInt()];
                 final week = key.split('-')[0];
                 return Padding(
@@ -204,7 +205,7 @@ class _ColorDistributionChart extends StatelessWidget {
                   );
                 }).toList(),
               ),
-              swapAnimationDuration: const Duration(milliseconds: 800),
+              duration: const Duration(milliseconds: 800),
             ),
           ),
         ),

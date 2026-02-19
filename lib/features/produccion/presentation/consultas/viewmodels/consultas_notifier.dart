@@ -4,6 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../domain/entities/ciclo_produccion.dart';
 import '../../../domain/entities/produccion_enums.dart';
 import '../../../../../app/di/providers.dart';
+import '../../../domain/logic/encintado_cohortes_logic.dart'; // Import nuevo
+
+import '../../../../administracion/domain/entities/finca.dart';
+import '../../../domain/entities/lote.dart';
 
 // ── Modelo local para proyección ──
 class ProximaCosechaLocal {
@@ -24,6 +28,8 @@ class ConsultasState {
 
   // Datos completos
   final List<CicloProduccion> ciclos;
+  final List<Finca> fincas; // Nuevo: Para jerarquía
+  final List<Lote> lotes; // Nuevo: Para jerarquía
 
   // Datos filtrados para mostrar
   final List<CicloProduccion> ciclosFiltrados;
@@ -34,6 +40,8 @@ class ConsultasState {
   final String? cintaFilter; // Hex color filter
   final String? variedadFilter; // Variedad Name filter
   final String? loteFilter; // Lote ID filter
+  final String? fincaFilter; // Nuevo: Finca Name filter
+  final bool sortAscending; // Nuevo: Ordenamiento
 
   // Totales calculados (basados en filtros)
   final double totalEncintado;
@@ -44,20 +52,26 @@ class ConsultasState {
   final List<CicloProduccion> inventario;
   final double totalInventario;
 
-  // Proyecciones de cosecha
+  // Proyecciones de cosecha (Old & New)
   final int semanasParaCosecha;
-  final List<ProximaCosechaLocal> proximasCosechas;
+  final List<ProximaCosechaLocal>
+  proximasCosechas; // Deprecated? Mantener por ahora
+  final List<CohorteResumen> cohortes; // Nueva Lógica Agrupada
 
   const ConsultasState({
     this.isLoading = false,
     this.error,
     this.ciclos = const [],
+    this.fincas = const [],
+    this.lotes = const [],
     this.ciclosFiltrados = const [],
     this.fechaInicio,
     this.fechaFin,
     this.cintaFilter,
     this.variedadFilter,
     this.loteFilter,
+    this.fincaFilter,
+    this.sortAscending = false, // Default: Descendente (más reciente primero)
     this.totalEncintado = 0,
     this.totalCosechado = 0,
     this.totalCiclos = 0,
@@ -65,18 +79,23 @@ class ConsultasState {
     this.totalInventario = 0,
     this.semanasParaCosecha = 30,
     this.proximasCosechas = const [],
+    this.cohortes = const [],
   });
 
   ConsultasState copyWith({
     bool? isLoading,
     String? error,
     List<CicloProduccion>? ciclos,
+    List<Finca>? fincas,
+    List<Lote>? lotes,
     List<CicloProduccion>? ciclosFiltrados,
     DateTime? fechaInicio,
     DateTime? fechaFin,
     String? cintaFilter,
     String? variedadFilter,
     String? loteFilter,
+    String? fincaFilter,
+    bool? sortAscending,
     double? totalEncintado,
     double? totalCosechado,
     int? totalCiclos,
@@ -84,17 +103,22 @@ class ConsultasState {
     double? totalInventario,
     int? semanasParaCosecha,
     List<ProximaCosechaLocal>? proximasCosechas,
+    List<CohorteResumen>? cohortes,
   }) {
     return ConsultasState(
       isLoading: isLoading ?? this.isLoading,
       error: error,
       ciclos: ciclos ?? this.ciclos,
+      fincas: fincas ?? this.fincas,
+      lotes: lotes ?? this.lotes,
       ciclosFiltrados: ciclosFiltrados ?? this.ciclosFiltrados,
       fechaInicio: fechaInicio ?? this.fechaInicio,
       fechaFin: fechaFin ?? this.fechaFin,
       cintaFilter: cintaFilter ?? this.cintaFilter,
       variedadFilter: variedadFilter ?? this.variedadFilter,
       loteFilter: loteFilter ?? this.loteFilter,
+      fincaFilter: fincaFilter ?? this.fincaFilter,
+      sortAscending: sortAscending ?? this.sortAscending,
       totalEncintado: totalEncintado ?? this.totalEncintado,
       totalCosechado: totalCosechado ?? this.totalCosechado,
       totalCiclos: totalCiclos ?? this.totalCiclos,
@@ -102,6 +126,7 @@ class ConsultasState {
       totalInventario: totalInventario ?? this.totalInventario,
       semanasParaCosecha: semanasParaCosecha ?? this.semanasParaCosecha,
       proximasCosechas: proximasCosechas ?? this.proximasCosechas,
+      cohortes: cohortes ?? this.cohortes,
     );
   }
 }
@@ -114,6 +139,7 @@ class ConsultasNotifier extends StateNotifier<ConsultasState> {
     : super(const ConsultasState()) {
     _loadSemanasParaCosecha();
     _subscribeToCiclos();
+    _subscribeToDatosMaestros(); // Nuevo: Fincas y Lotes
   }
 
   /// Lee semanasParaCosecha de la productora en Firestore
@@ -136,6 +162,25 @@ class ConsultasNotifier extends StateNotifier<ConsultasState> {
     }
   }
 
+  Future<void> refresh() async {
+    // Recargar configuraciones
+    await _loadSemanasParaCosecha();
+    // Simular un pequeño delay para feedback visual
+    await Future.delayed(const Duration(milliseconds: 600));
+  }
+
+  void _subscribeToDatosMaestros() {
+    final repo = ref.read(produccionRepositoryProvider);
+    // Fincas
+    repo.watchFincas(productoraId).listen((fincas) {
+      if (mounted) state = state.copyWith(fincas: fincas);
+    });
+    // Lotes
+    repo.watchLotes(productoraId).listen((lotes) {
+      if (mounted) state = state.copyWith(lotes: lotes);
+    });
+  }
+
   void _subscribeToCiclos() {
     state = state.copyWith(isLoading: true);
     final repo = ref.read(produccionRepositoryProvider);
@@ -148,15 +193,14 @@ class ConsultasNotifier extends StateNotifier<ConsultasState> {
           (ciclos) {
             if (mounted) {
               // Al recibir nuevos datos, actualizamos la lista maestra y reaplicamos filtros
-              state = state.copyWith(ciclos: ciclos, isLoading: false);
+              state = state.copyWith(isLoading: false, ciclos: ciclos);
               _applyFilters();
               _calculateInventario();
-              _calculateProyecciones();
             }
           },
-          onError: (error) {
+          onError: (err) {
             if (mounted) {
-              state = state.copyWith(isLoading: false, error: error.toString());
+              state = state.copyWith(isLoading: false, error: err.toString());
             }
           },
         );
@@ -164,53 +208,55 @@ class ConsultasNotifier extends StateNotifier<ConsultasState> {
 
   void setDateRange(DateTime? start, DateTime? end) {
     state = state.copyWith(fechaInicio: start, fechaFin: end);
+    // Aplicar filtros recalcula todo
     _applyFilters();
   }
 
-  void setCintaFilter(String? colorHex) {
-    state = ConsultasState(
-      isLoading: state.isLoading,
-      ciclos: state.ciclos,
-      ciclosFiltrados: state.ciclosFiltrados,
-      fechaInicio: state.fechaInicio,
-      fechaFin: state.fechaFin,
-      cintaFilter: colorHex,
-      variedadFilter: state.variedadFilter,
-      loteFilter: state.loteFilter,
-      totalEncintado: state.totalEncintado,
-      totalCosechado: state.totalCosechado,
-      totalCiclos: state.totalCiclos,
-      semanasParaCosecha: state.semanasParaCosecha,
-      proximasCosechas: state.proximasCosechas,
-      inventario: state.inventario,
-      totalInventario: state.totalInventario,
-    );
-    _applyFilters();
-  }
-
-  void setVariedadFilter(String? variedad) {
-    state = ConsultasState(
-      isLoading: state.isLoading,
-      ciclos: state.ciclos,
-      ciclosFiltrados: state.ciclosFiltrados,
-      fechaInicio: state.fechaInicio,
-      fechaFin: state.fechaFin,
-      cintaFilter: state.cintaFilter,
-      variedadFilter: variedad,
-      loteFilter: state.loteFilter,
-      totalEncintado: state.totalEncintado,
-      totalCosechado: state.totalCosechado,
-      totalCiclos: state.totalCiclos,
-      semanasParaCosecha: state.semanasParaCosecha,
-      proximasCosechas: state.proximasCosechas,
-      inventario: state.inventario,
-      totalInventario: state.totalInventario,
-    );
-    _applyFilters();
-  }
-
-  void setLoteFilter(String? lote) {
-    state = state.copyWith(loteFilter: lote);
+  void setFilters({
+    String? cintaFilter,
+    String? variedadFilter,
+    String? loteFilter,
+    String? fincaFilter,
+    bool? sortAscending,
+    DateTime? startDate,
+    DateTime? endDate,
+    bool resetOthers = false,
+  }) {
+    if (resetOthers) {
+      // Reconstruir estado conservando solo DATA, reseteando filtros
+      state = ConsultasState(
+        isLoading: state.isLoading,
+        error: state.error,
+        ciclos: state.ciclos,
+        fincas: state.fincas,
+        lotes: state.lotes,
+        // Filtros nuevos (nulos si no se pasan)
+        cintaFilter: cintaFilter,
+        variedadFilter: variedadFilter,
+        loteFilter: loteFilter,
+        fincaFilter: fincaFilter,
+        fechaInicio: startDate,
+        fechaFin: endDate,
+        sortAscending: sortAscending ?? false,
+        // Mantener calculados (se recalcularán en _applyFilters)
+        inventario: state.inventario,
+        totalInventario: state.totalInventario,
+        semanasParaCosecha: state.semanasParaCosecha,
+        cohortes: state.cohortes,
+        proximasCosechas: state.proximasCosechas,
+      );
+    } else {
+      // Merge normal
+      state = state.copyWith(
+        cintaFilter: cintaFilter,
+        variedadFilter: variedadFilter,
+        loteFilter: loteFilter,
+        fincaFilter: fincaFilter,
+        sortAscending: sortAscending,
+        fechaInicio: startDate,
+        fechaFin: endDate,
+      );
+    }
     _applyFilters();
   }
 
@@ -218,12 +264,16 @@ class ConsultasNotifier extends StateNotifier<ConsultasState> {
     state = ConsultasState(
       isLoading: state.isLoading,
       ciclos: state.ciclos,
+      fincas: state.fincas,
+      lotes: state.lotes,
       ciclosFiltrados: state.ciclos,
       fechaInicio: null,
       fechaFin: null,
       cintaFilter: null,
       variedadFilter: null,
       loteFilter: null,
+      fincaFilter: null,
+      sortAscending: false,
       totalEncintado: state.totalEncintado,
       totalCosechado: state.totalCosechado,
       totalCiclos: state.totalCiclos,
@@ -231,6 +281,7 @@ class ConsultasNotifier extends StateNotifier<ConsultasState> {
       proximasCosechas: state.proximasCosechas,
       inventario: state.inventario,
       totalInventario: state.totalInventario,
+      cohortes: state.cohortes,
     );
     _applyFilters();
   }
@@ -238,7 +289,7 @@ class ConsultasNotifier extends StateNotifier<ConsultasState> {
   void _applyFilters() {
     var filtered = state.ciclos;
 
-    // 1. Filtro de Fecha (Siembra)
+    // 1. Filtro de Fecha
     if (state.fechaInicio != null && state.fechaFin != null) {
       filtered = filtered.where((c) {
         return c.fechaSiembra.isAfter(
@@ -264,14 +315,46 @@ class ConsultasNotifier extends StateNotifier<ConsultasState> {
       }).toList();
     }
 
-    // 4. Filtro de Lote
+    // 4. Filtro de Lote (POR ID)
     if (state.loteFilter != null && state.loteFilter!.isNotEmpty) {
-      filtered = filtered
-          .where((c) => c.nombreLote == state.loteFilter)
-          .toList();
+      filtered = filtered.where((c) => c.idLote == state.loteFilter).toList();
     }
 
+    // 4.5. Filtro de Finca (Por Nombre)
+    if (state.fincaFilter != null && state.fincaFilter!.isNotEmpty) {
+      // Resolver ID de finca
+      final finca = state.fincas.firstWhere(
+        (f) => f.nombre == state.fincaFilter,
+        orElse: () => Finca(
+          id: '',
+          nombre: '',
+          productoraId: '',
+          ubicacion: '',
+          areaTotal: 0,
+        ),
+      );
+      if (finca.id.isNotEmpty) {
+        // Buscar lotes de esa finca
+        final lotesIds = state.lotes
+            .where((l) => l.fincaId == finca.id)
+            .map((l) => l.id)
+            .toSet();
+        filtered = filtered.where((c) => lotesIds.contains(c.idLote)).toList();
+      }
+    }
+
+    // 5. Ordenamiento
+    filtered.sort((a, b) {
+      final dateA = a.fechaSiembra;
+      final dateB = b.fechaSiembra;
+      return state.sortAscending
+          ? dateA.compareTo(dateB)
+          : dateB.compareTo(dateA);
+    });
+
     _calculateTotals(filtered);
+    // Recalcular proyecciones con los datos filtrados
+    _calculateProyecciones();
   }
 
   void _calculateTotals(List<CicloProduccion> filteredList) {
@@ -316,28 +399,59 @@ class ConsultasNotifier extends StateNotifier<ConsultasState> {
     });
     final total = inv.fold<double>(
       0,
-      (sum, c) => sum + (c.cantidadCosecha ?? 0),
+      (acumulador, c) => acumulador + (c.cantidadCosecha ?? 0),
     );
     state = state.copyWith(inventario: inv, totalInventario: total);
   }
 
-  /// Calcula proyecciones de cosecha para ciclos encintados
+  /// Calcula proyecciones de cosecha agrupadas por cohortes semanales (Logica Nueva)
   void _calculateProyecciones() {
+    final processor =
+        EncintadoProcessor(); // Importado de encintado_cohortes_logic.dart
+    final List<EncintadoInput> inputs = [];
+
+    // 1. Aplanar todos los encintados de los ciclos FILTRADOS
+    // Solo consideramos ciclos NO COSECHADOS FULL (o sea, estado != cosechado)
+    final ciclosActivos = state.ciclosFiltrados.where(
+      (c) => c.estado != EstadoCiclo.cosechado,
+    );
+
+    for (var ciclo in ciclosActivos) {
+      for (var e in ciclo.encintados) {
+        inputs.add(
+          EncintadoInput(
+            id: e.id,
+            loteId: ciclo.idLote,
+            cintaColor: e.cintaNombre,
+            cintaColorHex: e.cintaColorHex,
+            cantidad: e.cantidad.toInt(),
+            fecha: e.fecha,
+          ),
+        );
+      }
+    }
+
+    // 2. Procesar con la lógica de negocio (Semanas configurables)
+    final cohortesCalculadas = processor.procesarCohortes(
+      inputs,
+      state.semanasParaCosecha,
+    );
+
+    // 3. Mantener lógica vieja (ProximaCosechaLocal) por compatibilidad temporal
     final now = DateTime.now();
-    final semanas = state.semanasParaCosecha;
-    final List<ProximaCosechaLocal> proyecciones = [];
+    final List<ProximaCosechaLocal> proyeccionesViejas = [];
 
     for (var ciclo
         in state.inventario.isEmpty
-            ? state.ciclos.where((c) => c.estado == EstadoCiclo.encintado)
+            ? state.ciclosFiltrados.where(
+                (c) => c.estado == EstadoCiclo.encintado,
+              )
             : state.inventario) {
-      final fecha = ciclo.proyeccionCosecha(semanas);
+      final fecha = ciclo.proyeccionCosecha(state.semanasParaCosecha);
       if (fecha != null) {
-        // Normalizar a medianoche para cálculo exacto de días calendario
         final today = DateTime(now.year, now.month, now.day);
         final projectedDate = DateTime(fecha.year, fecha.month, fecha.day);
-
-        proyecciones.add(
+        proyeccionesViejas.add(
           ProximaCosechaLocal(
             ciclo: ciclo,
             fechaProyectada: fecha,
@@ -346,11 +460,15 @@ class ConsultasNotifier extends StateNotifier<ConsultasState> {
         );
       }
     }
+    proyeccionesViejas.sort(
+      (a, b) => a.fechaProyectada.compareTo(b.fechaProyectada),
+    );
 
-    // Ordenar por fecha proyectada (más próxima primero)
-    proyecciones.sort((a, b) => a.fechaProyectada.compareTo(b.fechaProyectada));
-
-    state = state.copyWith(proximasCosechas: proyecciones);
+    // Actualizar estado completo
+    state = state.copyWith(
+      proximasCosechas: proyeccionesViejas,
+      cohortes: cohortesCalculadas,
+    );
   }
 
   // --- Aggregation Logic for Charts ---

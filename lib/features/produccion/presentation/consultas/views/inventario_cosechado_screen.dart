@@ -5,7 +5,6 @@ import '../../../../../app/di/providers.dart';
 import '../../../domain/entities/ciclo_produccion.dart';
 import '../../widgets/ciclo_timeline.dart';
 import '../viewmodels/consultas_notifier.dart';
-import '../../viewmodels/produccion_notifier.dart';
 
 class InventarioCosechadoScreen extends ConsumerWidget {
   final String productoraId;
@@ -223,7 +222,7 @@ class InventarioCard extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        '${ciclo.cantidadCosecha?.toStringAsFixed(0) ?? "0"}',
+                        ciclo.cantidadCosecha?.toStringAsFixed(0) ?? "0",
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,

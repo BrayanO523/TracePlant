@@ -51,6 +51,7 @@ class ProductoraModel extends Productora {
     };
   }
 
+  @override
   ProductoraModel copyWith({
     String? id,
     String? name,

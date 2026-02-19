@@ -43,6 +43,7 @@ class _CintaFormScreenState extends ConsumerState<CintaFormScreen> {
 
   /// Convierte Color a hex string (#RRGGBB)
   String _colorToHex(Color color) {
+    // ignore: deprecated_member_use
     return '#${color.value.toRadixString(16).substring(2).toUpperCase()}';
   }
 
@@ -194,7 +195,7 @@ class _CintaFormScreenState extends ConsumerState<CintaFormScreen> {
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: currentColor.withOpacity(0.4),
+                            color: currentColor.withValues(alpha: 0.4),
                             blurRadius: 8,
                             spreadRadius: 1,
                           ),
@@ -250,7 +251,7 @@ class _CintaFormScreenState extends ConsumerState<CintaFormScreen> {
                         border: Border.all(
                           color: isSelected
                               ? theme.colorScheme.primary
-                              : Colors.grey.withOpacity(0.3),
+                              : Colors.grey.withValues(alpha: 0.3),
                           width: isSelected ? 3 : 1,
                         ),
                         boxShadow: isSelected
@@ -258,7 +259,7 @@ class _CintaFormScreenState extends ConsumerState<CintaFormScreen> {
                                 BoxShadow(
                                   color: Color(
                                     preset.colorValue,
-                                  ).withOpacity(0.4),
+                                  ).withValues(alpha: 0.4),
                                   blurRadius: 8,
                                   spreadRadius: 2,
                                 ),

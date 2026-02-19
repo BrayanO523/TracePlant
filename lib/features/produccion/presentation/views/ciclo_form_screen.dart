@@ -528,7 +528,7 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
                 ? _variedadController.text
                 : null;
             return DropdownButtonFormField<String>(
-              value: currentValue,
+              initialValue: currentValue,
               items: items
                   .map((v) => DropdownMenuItem(value: v, child: Text(v)))
                   .toList(),
