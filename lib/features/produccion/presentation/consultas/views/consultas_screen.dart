@@ -91,111 +91,119 @@ class _ConsultasScreenState extends ConsumerState<ConsultasScreen> {
           const SizedBox(width: 8),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Seleccione una categoría',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey,
-                fontWeight: FontWeight.w500,
+      body: RefreshIndicator(
+        onRefresh: ref
+            .read(consultasProvider(widget.productoraId).notifier)
+            .refresh,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Seleccione una categoría',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-            // Grid de opciones principales
-            GridView.count(
-              crossAxisCount: 2,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              mainAxisSpacing: 16,
-              crossAxisSpacing: 16,
-              childAspectRatio: 1.1,
-              children: [
-                _MenuOptionCard(
-                  title: 'Por Variedad',
-                  icon: Icons.eco_rounded,
-                  color: Colors.green,
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ConsultaVariedadView(
-                        productoraId: widget.productoraId,
+              // Grid de opciones principales
+              GridView.count(
+                crossAxisCount: 2,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                mainAxisSpacing: 16,
+                crossAxisSpacing: 16,
+                childAspectRatio: 1.1,
+                children: [
+                  _MenuOptionCard(
+                    title: 'Por Variedad',
+                    icon: Icons.eco_rounded,
+                    color: Colors.green,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ConsultaVariedadView(
+                          productoraId: widget.productoraId,
+                        ),
                       ),
                     ),
                   ),
+                  _MenuOptionCard(
+                    title: 'Por Cinta',
+                    icon: Icons.palette_rounded,
+                    color: Colors.blue,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ConsultaCintaView(
+                          productoraId: widget.productoraId,
+                        ),
+                      ),
+                    ),
+                  ),
+                  _MenuOptionCard(
+                    title: 'Por Finca / Lote',
+                    icon: Icons.terrain_rounded,
+                    color: Colors.brown,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ConsultaFincaView(
+                          productoraId: widget.productoraId,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 24),
+              const Text(
+                'Herramientas',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey,
+                  fontWeight: FontWeight.w500,
                 ),
-                _MenuOptionCard(
-                  title: 'Por Cinta',
-                  icon: Icons.palette_rounded,
-                  color: Colors.blue,
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          ConsultaCintaView(productoraId: widget.productoraId),
+              ),
+              const SizedBox(height: 16),
+
+              _ToolOptionTile(
+                title: 'Proyección de Cosecha',
+                subtitle: 'Ver estimaciones de cosecha futura',
+                icon: Icons.calendar_month_rounded,
+                color: AppColors.accent,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ProyeccionCosechaScreen(
+                      productoraId: widget.productoraId,
                     ),
                   ),
                 ),
-                _MenuOptionCard(
-                  title: 'Por Finca / Lote',
-                  icon: Icons.terrain_rounded,
-                  color: Colors.brown,
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          ConsultaFincaView(productoraId: widget.productoraId),
+              ),
+              const SizedBox(height: 12),
+              _ToolOptionTile(
+                title: 'Inventario Cosechado',
+                subtitle: 'Lotes cosechados pendientes de entrega',
+                icon: Icons.inventory_2_rounded,
+                color: Colors.orange,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => InventarioCosechadoScreen(
+                      productoraId: widget.productoraId,
                     ),
                   ),
                 ),
-              ],
-            ),
-
-            const SizedBox(height: 24),
-            const Text(
-              'Herramientas',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey,
-                fontWeight: FontWeight.w500,
               ),
-            ),
-            const SizedBox(height: 16),
-
-            _ToolOptionTile(
-              title: 'Proyección de Cosecha',
-              subtitle: 'Ver estimaciones de cosecha futura',
-              icon: Icons.calendar_month_rounded,
-              color: AppColors.accent,
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => ProyeccionCosechaScreen(
-                    productoraId: widget.productoraId,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            _ToolOptionTile(
-              title: 'Inventario Cosechado',
-              subtitle: 'Lotes cosechados pendientes de entrega',
-              icon: Icons.inventory_2_rounded,
-              color: Colors.orange,
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => InventarioCosechadoScreen(
-                    productoraId: widget.productoraId,
-                  ),
-                ),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -235,7 +243,7 @@ class _MenuOptionCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(icon, size: 32, color: color),
@@ -289,7 +297,7 @@ class _ToolOptionTile extends StatelessWidget {
         leading: Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+            color: color.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(icon, color: color),

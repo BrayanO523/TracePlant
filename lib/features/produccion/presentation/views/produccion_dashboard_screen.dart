@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../app/di/providers.dart';
 import '../../../../app/theme/app_colors.dart';
 import 'produccion_fincas_screen.dart';
+import '../consultas/views/consultas_screen.dart';
+import '../consultas/views/inventario_cosechado_screen.dart';
+import '../consultas/views/proyeccion_cosecha_screen.dart';
 
 class ProduccionDashboardScreen extends ConsumerStatefulWidget {
   final String productoraId;
@@ -46,6 +49,7 @@ class _ProduccionDashboardScreenState
         (stats) {
           setState(() {
             _stats = {
+              'productoraId': widget.productoraId,
               'ciclosActivos': stats.ciclosActivos,
               'lotesActivos': stats.lotesActivos,
               'volumenCosecha': stats.volumenCosecha,
@@ -90,7 +94,7 @@ class _ProduccionDashboardScreenState
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 10,
                   offset: const Offset(0, -5),
                 ),
@@ -166,6 +170,14 @@ class _StatsGrid extends StatelessWidget {
               color: AppColors.info,
               label: 'Ciclos Activos',
               value: stats['ciclosActivos'].toString(),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ConsultasScreen(
+                    productoraId: stats['productoraId'] ?? "",
+                  ),
+                ),
+              ),
             ),
             _StatCard(
               width: itemWidth,
@@ -173,6 +185,14 @@ class _StatsGrid extends StatelessWidget {
               color: AppColors.secondary,
               label: 'Lotes Activos',
               value: stats['lotesActivos'].toString(),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ConsultasScreen(
+                    productoraId: stats['productoraId'] ?? "",
+                  ),
+                ),
+              ),
             ),
             _StatCard(
               width: itemWidth,
@@ -180,6 +200,14 @@ class _StatsGrid extends StatelessWidget {
               color: AppColors.primary,
               label: 'Cosecha Total',
               value: '${stats['volumenCosecha'].toStringAsFixed(1)} un',
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => InventarioCosechadoScreen(
+                    productoraId: stats['productoraId'] ?? "",
+                  ),
+                ),
+              ),
             ),
             _StatCard(
               width: itemWidth,
@@ -187,6 +215,14 @@ class _StatsGrid extends StatelessWidget {
               color: AppColors.accent,
               label: 'En Cinta',
               value: '${stats['volumenEncintado'].toStringAsFixed(1)} un',
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ProyeccionCosechaScreen(
+                    productoraId: stats['productoraId'] ?? "",
+                  ),
+                ),
+              ),
             ),
           ],
         );
@@ -201,6 +237,7 @@ class _StatCard extends StatelessWidget {
   final Color color;
   final String label;
   final String value;
+  final VoidCallback? onTap;
 
   const _StatCard({
     required this.width,
@@ -208,55 +245,63 @@ class _StatCard extends StatelessWidget {
     required this.color,
     required this.label,
     required this.value,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: width,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.borderLight),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
+        child: Container(
+          width: width,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppColors.borderLight),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.02),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon, color: color, size: 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: color, size: 24),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: AppColors.textSecondary,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 12),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 14,
-              color: AppColors.textSecondary,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

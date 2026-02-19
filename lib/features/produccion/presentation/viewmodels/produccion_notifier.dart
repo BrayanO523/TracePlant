@@ -57,9 +57,12 @@ class ProduccionState {
     if (cicloActivo.isEmpty) return TipoEvento.siembra;
 
     final ciclo = cicloActivo.first;
-    if (ciclo.estado == EstadoCiclo.sembrado) return TipoEvento.encintado;
-    if (ciclo.estado == EstadoCiclo.encintado)
+    if (ciclo.estado == EstadoCiclo.sembrado) {
+      return TipoEvento.encintado;
+    }
+    if (ciclo.estado == EstadoCiclo.encintado) {
       return TipoEvento.encintado; // Permitir múltiples encintados
+    }
     return null;
   }
 }

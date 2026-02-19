@@ -255,12 +255,15 @@ class _HistoryCard extends StatelessWidget {
     final estadoStr = ciclo.estado.name.toUpperCase();
 
     Color estadoColor = Colors.grey;
-    if (ciclo.estado.name == 'cosechado')
+    if (ciclo.estado.name == 'cosechado') {
       estadoColor = AppColors.estadoCosechado;
-    if (ciclo.estado.name == 'entregado')
+    }
+    if (ciclo.estado.name == 'entregado') {
       estadoColor = AppColors.estadoEntregado;
-    if (ciclo.estado.name == 'cancelado')
+    }
+    if (ciclo.estado.name == 'cancelado') {
       estadoColor = AppColors.estadoCancelado;
+    }
 
     return Card(
       elevation: 0,
@@ -290,7 +293,7 @@ class _HistoryCard extends StatelessWidget {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: estadoColor.withOpacity(0.1),
+                      color: estadoColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
