@@ -46,7 +46,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       }
 
       // Role-based guards
-      if (state.uri.path.startsWith('/admin') && user!.role != UserRole.admin) {
+      if (state.uri.path.startsWith('/admin') && user.role != UserRole.admin) {
         return '/login';
       }
 

@@ -95,7 +95,7 @@ class PdfReportGenerator {
           _buildSummaryItem('Total Ciclos', '${state.totalCiclos}'),
           _buildSummaryItem(
             'Encintados',
-            '${state.totalEncintado.toStringAsFixed(0)}',
+            state.totalEncintado.toStringAsFixed(0),
           ),
           _buildSummaryItem(
             'Cosechado',
@@ -140,12 +140,13 @@ class PdfReportGenerator {
     DateFormat dateFormat,
   ) {
     final data = ciclos.map((c) {
+      final cosecha = c.cantidadCosecha ?? 0;
       return [
-        c.nombreLote ?? 'Lote ${c.idLote.substring(0, 4)}...',
+        c.nombreLote,
         c.variedad,
         dateFormat.format(c.fechaSiembra),
         c.totalEncintado.toStringAsFixed(0),
-        c.cantidadCosecha?.toStringAsFixed(1) ?? '-',
+        cosecha.toStringAsFixed(1),
         c.estado.name, // Enum name
       ];
     }).toList();

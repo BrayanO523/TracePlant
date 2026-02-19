@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../app/theme/app_colors.dart';
 import '../viewmodels/consultas_notifier.dart';
 import '../../widgets/ciclo_timeline.dart';
-// import '../../../../administracion/domain/entities/cinta.dart'; // No se usa directamente aquí por ahora
+import '../widgets/consultas_filter_modal.dart';
+import '../../../../administracion/domain/entities/finca.dart';
+import '../../../domain/entities/lote.dart'; // Lote de Produccion
 
 // ─── CONSULTA POR VARIEDAD ───────────────────────────────────────────────────
 class ConsultaVariedadView extends ConsumerWidget {
@@ -25,42 +27,56 @@ class ConsultaVariedadView extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Consultar por Variedad')),
-      body: variedades.isEmpty
-          ? const Center(
-              child: Text('No hay variedades registradas en ciclos activos'),
-            )
-          : ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: variedades.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                final variedad = variedades[index];
-                final count = state.ciclos
-                    .where((c) => c.variedad == variedad)
-                    .length;
+      body: RefreshIndicator(
+        onRefresh: () async =>
+            ref.read(consultasProvider(productoraId).notifier).refresh(),
+        child: variedades.isEmpty
+            ? ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: const [
+                  SizedBox(height: 200),
+                  Center(
+                    child: Text(
+                      'No hay variedades registradas en ciclos activos',
+                    ),
+                  ),
+                ],
+              )
+            : ListView.separated(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(16),
+                itemCount: variedades.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                itemBuilder: (context, index) {
+                  final variedad = variedades[index];
+                  final count = state.ciclos
+                      .where((c) => c.variedad == variedad)
+                      .length;
 
-                return _OpcionCard(
-                  title: variedad,
-                  subtitle: '$count lotes activos',
-                  icon: Icons.eco_rounded,
-                  color: Colors.green,
-                  onTap: () {
-                    // Navegar a resultados filtrados
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => ResultadosConsultaView(
-                          productoraId: productoraId,
-                          titulo: 'Variedad: $variedad',
-                          filtroInicial: (notifier) =>
-                              notifier.setVariedadFilter(variedad),
+                  return _OpcionCard(
+                    title: variedad,
+                    subtitle: '$count lotes activos',
+                    icon: Icons.eco_rounded,
+                    color: Colors.green,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ResultadosConsultaView(
+                            productoraId: productoraId,
+                            titulo: 'Variedad: $variedad',
+                            filtroInicial: (notifier) => notifier.setFilters(
+                              variedadFilter: variedad,
+                              resetOthers: true,
+                            ),
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
+                      );
+                    },
+                  );
+                },
+              ),
+      ),
     );
   }
 }
@@ -88,49 +104,62 @@ class ConsultaCintaView extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Consultar por Cinta')),
-      body: coloresList.isEmpty
-          ? const Center(
-              child: Text('No hay cintas registradas en ciclos activos'),
-            )
-          : ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: coloresList.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                final hex = coloresList[index];
-                final count = coloresMap[hex];
-                final color = _parseColor(hex);
-
-                return _OpcionCard(
-                  title: 'Cinta',
-                  subtitle: '$count registros',
-                  icon: Icons.circle,
-                  color: color,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => ResultadosConsultaView(
-                          productoraId: productoraId,
-                          titulo: 'Filtro por Color',
-                          filtroInicial: (notifier) =>
-                              notifier.setCintaFilter(hex),
-                        ),
-                      ),
-                    );
-                  },
-                  customLeading: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: color,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.black12),
-                    ),
+      body: RefreshIndicator(
+        onRefresh: () async =>
+            ref.read(consultasProvider(productoraId).notifier).refresh(),
+        child: coloresList.isEmpty
+            ? ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: const [
+                  SizedBox(height: 200),
+                  Center(
+                    child: Text('No hay cintas registradas en ciclos activos'),
                   ),
-                );
-              },
-            ),
+                ],
+              )
+            : ListView.separated(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(16),
+                itemCount: coloresList.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                itemBuilder: (context, index) {
+                  final hex = coloresList[index];
+                  final count = coloresMap[hex];
+                  final color = _parseColor(hex);
+
+                  return _OpcionCard(
+                    title: 'Cinta',
+                    subtitle: '$count registros',
+                    icon: Icons.circle,
+                    color: color,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ResultadosConsultaView(
+                            productoraId: productoraId,
+                            titulo: 'Filtro por Color',
+                            filtroInicial: (notifier) => notifier.setFilters(
+                              cintaFilter: hex,
+                              resetOthers: true,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                    customLeading: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: color,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.black12),
+                      ),
+                    ),
+                  );
+                },
+              ),
+      ),
     );
   }
 
@@ -148,6 +177,7 @@ class ConsultaCintaView extends ConsumerWidget {
 }
 
 // ─── CONSULTA POR FINCA ──────────────────────────────────────────────────────
+// ─── CONSULTA POR FINCA (Jerarquía: Finca -> Lotes) ──────────────────────────
 class ConsultaFincaView extends ConsumerWidget {
   final String productoraId;
 
@@ -157,41 +187,151 @@ class ConsultaFincaView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(consultasProvider(productoraId));
 
-    final lotes = state.ciclos.map((c) => c.nombreLote).toSet().toList();
-    lotes.sort();
+    // 1. Identificar Fincas con actividad
+    //    a) Obtener IDs de lotes con ciclos activos
+    final loteIdsConCiclos = state.ciclos.map((c) => c.idLote).toSet();
+
+    //    b) Filtrar lotes activos (usando la lista maestra de lotes)
+    final lotesActivos = state.lotes.where(
+      (l) => loteIdsConCiclos.contains(l.id),
+    );
+
+    //    c) Obtener IDs de fincas relacionadas
+    final fincaIdsConActividad = lotesActivos.map((l) => l.fincaId).toSet();
+
+    //    d) Filtrar fincas para mostrar (usando lista maestra de fincas)
+    final fincasDisplay = state.fincas
+        .where((f) => fincaIdsConActividad.contains(f.id))
+        .toList();
+
+    // Ordenar alfabéticamente
+    fincasDisplay.sort((a, b) => a.nombre.compareTo(b.nombre));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Consultar por Lote/Finca')),
-      body: lotes.isEmpty
-          ? const Center(child: Text('No hay lotes con ciclos activos'))
-          : ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: lotes.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                final nombreLote = lotes[index];
+      appBar: AppBar(title: const Text('Seleccionar Finca')),
+      body: RefreshIndicator(
+        onRefresh: () async =>
+            ref.read(consultasProvider(productoraId).notifier).refresh(),
+        child: fincasDisplay.isEmpty
+            ? ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: const [
+                  SizedBox(height: 200),
+                  Center(child: Text('No hay fincas con producción activa')),
+                ],
+              )
+            : ListView.separated(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(16),
+                itemCount: fincasDisplay.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                itemBuilder: (context, index) {
+                  final finca = fincasDisplay[index];
+                  // Contar lotes activos en esta finca
+                  final lotesCount = lotesActivos
+                      .where((l) => l.fincaId == finca.id)
+                      .length;
 
-                return _OpcionCard(
-                  title: nombreLote,
-                  subtitle: 'Ver historial del lote',
-                  icon: Icons.grid_on_rounded,
-                  color: Colors.brown,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => ResultadosConsultaView(
-                          productoraId: productoraId,
-                          titulo: 'Lote: $nombreLote',
-                          filtroInicial: (notifier) =>
-                              notifier.setLoteFilter(nombreLote),
+                  return _OpcionCard(
+                    title: finca.nombre,
+                    subtitle: '$lotesCount lotes activos',
+                    icon: Icons.domain, // Icono de granja/finca
+                    color: Colors.brown,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ConsultaLotesFincaView(
+                            productoraId: productoraId,
+                            finca: finca,
+                            lotesDeFinca: lotesActivos
+                                .where((l) => l.fincaId == finca.id)
+                                .toList(),
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
+                      );
+                    },
+                  );
+                },
+              ),
+      ),
+    );
+  }
+}
+
+class ConsultaLotesFincaView extends ConsumerWidget {
+  final String productoraId;
+  final Finca finca;
+  final List<Lote> lotesDeFinca;
+
+  const ConsultaLotesFincaView({
+    super.key,
+    required this.productoraId,
+    required this.finca,
+    required this.lotesDeFinca,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Ordenar lotes por nombre para facilitar búsqueda
+    final displayLotes = List<Lote>.from(lotesDeFinca)
+      ..sort((a, b) => a.nombre.compareTo(b.nombre));
+
+    return Scaffold(
+      appBar: AppBar(title: Text('Lotes de ${finca.nombre}')),
+      body: RefreshIndicator(
+        onRefresh: () async =>
+            ref.read(consultasProvider(productoraId).notifier).refresh(),
+        child: displayLotes.isEmpty
+            ? ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: const [
+                  SizedBox(height: 200),
+                  Center(child: Text('No hay lotes activos en esta finca')),
+                ],
+              )
+            : ListView.separated(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(16),
+                itemCount: displayLotes.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                itemBuilder: (context, index) {
+                  final lote = displayLotes[index];
+
+                  // Información adicional del lote obtenida del ciclo?
+                  // Podríamos buscar el ciclo para mostrar la variedad, pero Lote ya tiene variedad?
+                  // El Lote de produccion tiene variedad.
+
+                  return _OpcionCard(
+                    title: lote.nombre,
+                    subtitle: 'Variedad: ${lote.variedad} • ${lote.area} mz',
+                    icon: Icons.grid_on_rounded,
+                    color: Colors.green.shade700,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ResultadosConsultaView(
+                            productoraId: productoraId,
+                            titulo: 'Lote: ${lote.nombre}',
+                            // IMPORTANTE: Filtrar por Nombre de Lote o ID?
+                            // El notifier usa loteFilter.
+                            // Veamos setFilters: loteFilter: loteFilter.
+                            // Y el filtro lo aplica sobre ciclo.nombreLote o ciclo.idLote?
+                            // ConsultasNotifier usa: ciclo.nombreLote.toLowerCase().contains(filter.toLowerCase())
+                            // Así que pasamos el NOMBRE.
+                            filtroInicial: (notifier) => notifier.setFilters(
+                              loteFilter: lote.id,
+                              resetOthers: true,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+      ),
     );
   }
 }
@@ -240,10 +380,16 @@ class _ResultadosConsultaViewState
         title: Text(widget.titulo),
         actions: [
           IconButton(
-            icon: const Icon(Icons.filter_list_alt),
+            icon: const Icon(
+              Icons.tune_rounded,
+            ), // Icono ajustado a "Configurar"
             onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Filtros avanzados próximamente')),
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (_) =>
+                    ConsultasFilterModal(productoraId: widget.productoraId),
               );
             },
           ),
@@ -264,11 +410,11 @@ class _ResultadosConsultaViewState
                 ),
                 _StatItem(
                   label: 'Encintado',
-                  value: '${state.totalEncintado.toStringAsFixed(0)}',
+                  value: state.totalEncintado.toStringAsFixed(0),
                 ),
                 _StatItem(
                   label: 'Cosechado',
-                  value: '${state.totalCosechado.toStringAsFixed(0)}',
+                  value: state.totalCosechado.toStringAsFixed(0),
                 ),
               ],
             ),
@@ -277,54 +423,74 @@ class _ResultadosConsultaViewState
 
           // Lista
           Expanded(
-            child: state.ciclosFiltrados.isEmpty
-                ? const Center(child: Text('No se encontraron resultados'))
-                : ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: state.ciclosFiltrados.length,
-                    itemBuilder: (context, index) {
-                      final ciclo = state.ciclosFiltrados[index];
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          side: BorderSide(color: Colors.grey.shade200),
+            child: RefreshIndicator(
+              onRefresh: () async => ref
+                  .read(consultasProvider(widget.productoraId).notifier)
+                  .refresh(),
+              child: state.ciclosFiltrados.isEmpty
+                  ? ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      children: [
+                        SizedBox(
+                          height: MediaQuery.of(context).size.height * 0.3,
                         ),
-                        child: ExpansionTile(
-                          shape: const RoundedRectangleBorder(
-                            side: BorderSide.none,
-                          ), // CORREGIDO AQUÍ
-                          collapsedShape: const RoundedRectangleBorder(
-                            side: BorderSide.none,
-                          ), // CORREGIDO AQUÍ
-                          leading: CircleAvatar(
-                            backgroundColor: AppColors.primary.withOpacity(0.1),
-                            child: Text(
-                              ciclo.nombreLote.substring(0, 1).toUpperCase(),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.primary,
+                        const Center(
+                          child: Text('No se encontraron resultados'),
+                        ),
+                      ],
+                    )
+                  : ListView.builder(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.all(16),
+                      itemCount: state.ciclosFiltrados.length,
+                      itemBuilder: (context, index) {
+                        final ciclo = state.ciclosFiltrados[index];
+                        return Card(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            side: BorderSide(color: Colors.grey.shade200),
+                          ),
+                          child: ExpansionTile(
+                            shape: const RoundedRectangleBorder(
+                              side: BorderSide.none,
+                            ),
+                            collapsedShape: const RoundedRectangleBorder(
+                              side: BorderSide.none,
+                            ),
+                            leading: CircleAvatar(
+                              backgroundColor: AppColors.primary.withValues(
+                                alpha: 0.1,
+                              ),
+                              child: Text(
+                                ciclo.nombreLote.substring(0, 1).toUpperCase(),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primary,
+                                ),
                               ),
                             ),
-                          ),
-                          title: Text(
-                            ciclo.nombreLote,
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          subtitle: Text(
-                            '${ciclo.variedad} • ${ciclo.area} mz\nEstado: ${ciclo.estado.name.toUpperCase()}',
-                          ),
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: CicloTimeline(ciclo: ciclo),
+                            title: Text(
+                              ciclo.nombreLote,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
+                            subtitle: Text(
+                              '${ciclo.variedad} • ${ciclo.area} mz\nEstado: ${ciclo.estado.name.toUpperCase()}',
+                            ),
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: CicloTimeline(ciclo: ciclo),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+            ),
           ),
         ],
       ),
@@ -370,7 +536,7 @@ class _OpcionCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: color.withOpacity(0.1),
+                      color: color.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(icon, color: color),
