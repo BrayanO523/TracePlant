@@ -82,7 +82,7 @@ class CintasScreen extends ConsumerWidget {
                               border: Border.all(color: AppColors.borderLight),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.03),
+                                  color: Colors.black.withValues(alpha: 0.03),
                                   blurRadius: 8,
                                   offset: const Offset(0, 2),
                                 ),
@@ -97,11 +97,13 @@ class CintasScreen extends ConsumerWidget {
                                     color: color,
                                     borderRadius: BorderRadius.circular(14),
                                     border: Border.all(
-                                      color: Colors.black.withOpacity(0.1),
+                                      color: Colors.black.withValues(
+                                        alpha: 0.1,
+                                      ),
                                     ),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: color.withOpacity(0.3),
+                                        color: color.withValues(alpha: 0.3),
                                         blurRadius: 8,
                                         offset: const Offset(0, 2),
                                       ),

@@ -27,11 +27,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(authNotifierProvider);
-    final isLoading = state.isLoading;
+    final isLoading = ref.watch(authNotifierProvider).isLoading;
 
     // Escuchar errores de perfil (ej. permisos de Firestore)
-    final userProfileState = ref.watch(currentUserStreamProvider);
 
     ref.listen(currentUserStreamProvider, (prev, next) {
       if (next.isLoading) return;
@@ -108,7 +106,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       borderRadius: BorderRadius.circular(24),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.15),
+                          color: Colors.black.withValues(alpha: 0.15),
                           blurRadius: 30,
                           offset: const Offset(0, 10),
                         ),

@@ -39,7 +39,7 @@ class FincaDetailScreen extends ConsumerWidget {
                 Container(
                   width: 1,
                   height: 40,
-                  color: Colors.white.withOpacity(0.3),
+                  color: Colors.white.withValues(alpha: 0.3),
                 ),
                 _InfoTile(
                   icon: Icons.straighten_rounded,
@@ -126,7 +126,7 @@ class FincaDetailScreen extends ConsumerWidget {
                         border: Border.all(color: AppColors.borderLight),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.03),
+                            color: Colors.black.withValues(alpha: 0.03),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
                           ),
@@ -138,7 +138,7 @@ class FincaDetailScreen extends ConsumerWidget {
                             width: 44,
                             height: 44,
                             decoration: BoxDecoration(
-                              color: AppColors.primary.withOpacity(0.1),
+                              color: AppColors.primary.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: const Icon(

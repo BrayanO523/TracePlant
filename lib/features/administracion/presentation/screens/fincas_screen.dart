@@ -82,7 +82,7 @@ class FincasScreen extends ConsumerWidget {
                               border: Border.all(color: AppColors.borderLight),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.03),
+                                  color: Colors.black.withValues(alpha: 0.03),
                                   blurRadius: 8,
                                   offset: const Offset(0, 2),
                                 ),
@@ -94,7 +94,9 @@ class FincasScreen extends ConsumerWidget {
                                   width: 48,
                                   height: 48,
                                   decoration: BoxDecoration(
-                                    color: AppColors.tertiary.withOpacity(0.12),
+                                    color: AppColors.tertiary.withValues(
+                                      alpha: 0.12,
+                                    ),
                                     borderRadius: BorderRadius.circular(14),
                                   ),
                                   child: const Icon(
