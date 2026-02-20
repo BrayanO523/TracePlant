@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../app/di/providers.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/constants/firestore_paths.dart';
 import '../../data/models/productora_model.dart';
@@ -166,6 +167,10 @@ class _ProductoraSettingsScreenState
 
   @override
   Widget build(BuildContext context) {
+    final currentUser = ref.watch(currentUserStreamProvider).value;
+    final canEdit =
+        currentUser?.effectivePermissions.ajustesEmpresa.editar ?? false;
+
     return Scaffold(
       backgroundColor: AppColors.surfaceVariant,
       appBar: AppBar(
@@ -174,7 +179,7 @@ class _ProductoraSettingsScreenState
         backgroundColor: AppColors.surfaceVariant,
         elevation: 0,
         actions: [
-          if (!_loading && _productora != null)
+          if (!_loading && _productora != null && canEdit)
             Padding(
               padding: const EdgeInsets.only(right: 16.0),
               child: IconButton(
@@ -198,161 +203,205 @@ class _ProductoraSettingsScreenState
           ? const Center(child: CircularProgressIndicator())
           : _productora == null
           ? const Center(child: Text('No se encontró la empresa'))
-          : Form(
-              key: _formKey,
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildSectionTitle('Información General'),
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: AppColors.borderLight),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.03),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        children: [
-                          _buildTextField(
-                            controller: _nombreController,
-                            label: 'Nombre de la Empresa *',
-                            icon: Icons.business_rounded,
-                            validator: (v) =>
-                                v?.trim().isEmpty == true ? 'Requerido' : null,
-                          ),
-                          const SizedBox(height: 16),
-                          _buildTextField(
-                            controller: _rtnController,
-                            label: 'RTN',
-                            icon: Icons.badge_outlined,
-                          ),
-                          const SizedBox(height: 16),
-                          _buildTextField(
-                            controller: _ubicacionController,
-                            label: 'Ubicación',
-                            icon: Icons.location_on_outlined,
-                            maxLines: 2,
-                          ),
-                          const SizedBox(height: 16),
-                          _buildTextField(
-                            controller: _telefonoController,
-                            label: 'Teléfono',
-                            icon: Icons.phone_outlined,
-                            keyboardType: TextInputType.phone,
-                          ),
-                          const SizedBox(height: 16),
-                          _buildTextField(
-                            controller: _correoController,
-                            label: 'Correo Electrónico',
-                            icon: Icons.email_outlined,
-                            keyboardType: TextInputType.emailAddress,
-                          ),
-                        ],
-                      ),
-                    ),
+          : Consumer(
+              builder: (context, ref, _) {
+                final currentUser = ref.watch(currentUserStreamProvider).value;
+                final canEdit =
+                    currentUser?.effectivePermissions.ajustesEmpresa.editar ??
+                    false;
 
-                    const SizedBox(height: 28),
-
-                    _buildSectionTitle('Configuración de Cosecha'),
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: AppColors.borderLight),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.03),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.timer_outlined,
-                                color: AppColors.primary,
-                              ),
-                              const SizedBox(width: 8),
-                              const Text(
-                                'Semanas para Proyección',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 14,
+                return Form(
+                  key: _formKey,
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (!canEdit)
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            margin: const EdgeInsets.only(bottom: 16),
+                            decoration: BoxDecoration(
+                              color: AppColors.error.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Row(
+                              children: [
+                                Icon(
+                                  Icons.info_outline,
+                                  color: AppColors.error,
                                 ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          const Text(
-                            'Tiempo estimado desde encintado hasta cosecha.',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: AppColors.textSecondary,
+                                SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'No tienes permiso para editar los ajustes de la empresa. Modo lectura.',
+                                    style: TextStyle(
+                                      color: AppColors.error,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          const SizedBox(height: 16),
-                          _buildTextField(
-                            controller: _semanasController,
-                            label: 'Semanas',
-                            icon: Icons.calendar_month_rounded,
-                            keyboardType: TextInputType.number,
-                            inputFormatters: [
-                              FilteringTextInputFormatter.digitsOnly,
-                              LengthLimitingTextInputFormatter(3),
+                        _buildSectionTitle('Información General'),
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: AppColors.surface,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: AppColors.borderLight),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.03),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
                             ],
-                            suffixText: 'semanas',
                           ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 40),
-
-                    SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: FilledButton.icon(
-                        onPressed: _saving ? null : _guardarCambios,
-                        style: FilledButton.styleFrom(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                          child: Column(
+                            children: [
+                              _buildTextField(
+                                controller: _nombreController,
+                                label: 'Nombre de la Empresa *',
+                                icon: Icons.business_rounded,
+                                readOnly: !canEdit,
+                                validator: (v) => v?.trim().isEmpty == true
+                                    ? 'Requerido'
+                                    : null,
+                              ),
+                              const SizedBox(height: 16),
+                              _buildTextField(
+                                controller: _rtnController,
+                                label: 'RTN',
+                                icon: Icons.badge_outlined,
+                                readOnly: !canEdit,
+                              ),
+                              const SizedBox(height: 16),
+                              _buildTextField(
+                                controller: _ubicacionController,
+                                label: 'Ubicación',
+                                icon: Icons.location_on_outlined,
+                                maxLines: 2,
+                                readOnly: !canEdit,
+                              ),
+                              const SizedBox(height: 16),
+                              _buildTextField(
+                                controller: _telefonoController,
+                                label: 'Teléfono',
+                                icon: Icons.phone_outlined,
+                                keyboardType: TextInputType.phone,
+                                readOnly: !canEdit,
+                              ),
+                              const SizedBox(height: 16),
+                              _buildTextField(
+                                controller: _correoController,
+                                label: 'Correo Electrónico',
+                                icon: Icons.email_outlined,
+                                keyboardType: TextInputType.emailAddress,
+                                readOnly: !canEdit,
+                              ),
+                            ],
                           ),
                         ),
-                        icon: _saving
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2,
+
+                        const SizedBox(height: 28),
+
+                        _buildSectionTitle('Configuración de Cosecha'),
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: AppColors.surface,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: AppColors.borderLight),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.03),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.timer_outlined,
+                                    color: AppColors.primary,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Text(
+                                    'Semanas para Proyección',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              const Text(
+                                'Tiempo estimado desde encintado hasta cosecha.',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.textSecondary,
                                 ),
-                              )
-                            : const Icon(Icons.save_rounded),
-                        label: Text(
-                          _saving ? 'Guardando...' : 'Guardar Cambios',
+                              ),
+                              const SizedBox(height: 16),
+                              _buildTextField(
+                                controller: _semanasController,
+                                label: 'Semanas',
+                                icon: Icons.calendar_month_rounded,
+                                keyboardType: TextInputType.number,
+                                readOnly: !canEdit,
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.digitsOnly,
+                                  LengthLimitingTextInputFormatter(3),
+                                ],
+                                suffixText: 'semanas',
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
+
+                        const SizedBox(height: 40),
+
+                        if (canEdit)
+                          SizedBox(
+                            width: double.infinity,
+                            height: 50,
+                            child: FilledButton.icon(
+                              onPressed: _saving ? null : _guardarCambios,
+                              style: FilledButton.styleFrom(
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              icon: _saving
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        color: Colors.white,
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Icon(Icons.save_rounded),
+                              label: Text(
+                                _saving ? 'Guardando...' : 'Guardar Cambios',
+                              ),
+                            ),
+                          ),
+                        const SizedBox(height: 40),
+                      ],
                     ),
-                    const SizedBox(height: 40),
-                  ],
-                ),
-              ),
+                  ),
+                );
+              },
             ),
     );
   }
@@ -378,9 +427,11 @@ class _ProductoraSettingsScreenState
     String? Function(String?)? validator,
     int maxLines = 1,
     String? suffixText,
+    bool readOnly = false,
   }) {
     return TextFormField(
       controller: controller,
+      readOnly: readOnly,
       keyboardType: keyboardType,
       inputFormatters: inputFormatters,
       validator: validator,

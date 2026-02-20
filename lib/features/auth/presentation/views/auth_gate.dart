@@ -47,6 +47,10 @@ class AuthGate extends ConsumerWidget {
               return const _ProfileErrorScreen();
             }
 
+            if (!appUser.isActive) {
+              return const _InactiveAccountScreen();
+            }
+
             // 3. Enrutar según rol
             return switch (appUser.role) {
               UserRole.admin => const AdminHomeScreen(),
@@ -137,6 +141,58 @@ class _ProfileErrorScreen extends ConsumerWidget {
                   },
                   icon: const Icon(Icons.logout_rounded),
                   label: const Text('Cerrar Sesión'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: AppColors.primary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Pantalla de error cuando la cuenta está desactivada por el administrador.
+class _InactiveAccountScreen extends ConsumerWidget {
+  const _InactiveAccountScreen();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Scaffold(
+      body: Container(
+        decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.block_rounded, size: 64, color: Colors.white),
+                const SizedBox(height: 16),
+                const Text(
+                  'Cuenta Desactivada',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'El administrador ha desactivado tu acceso al sistema.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white70, fontSize: 14),
+                ),
+                const SizedBox(height: 24),
+                FilledButton.icon(
+                  onPressed: () async {
+                    await ref.read(authNotifierProvider.notifier).signOut();
+                  },
+                  icon: const Icon(Icons.arrow_back_rounded),
+                  label: const Text('Volver al Login'),
                   style: FilledButton.styleFrom(
                     backgroundColor: Colors.white,
                     foregroundColor: AppColors.primary,

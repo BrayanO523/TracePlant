@@ -338,6 +338,27 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 12),
+
+                // ── CONFIGURACIÓN DE EMPRESA ──
+                _PermissionModule(
+                  title: 'Configuración Empresa',
+                  icon: Icons.settings_rounded,
+                  color: Colors.blueGrey,
+                  children: [
+                    _PermissionSubModule(
+                      title: 'Ajustes de Empresa',
+                      icon: Icons.manage_accounts_rounded,
+                      permission: _permissions.ajustesEmpresa,
+                      actions: const ['ver', 'editar'], // Solo ver y editar
+                      onChanged: (p) => setState(
+                        () => _permissions = _permissions.copyWith(
+                          ajustesEmpresa: p,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
 
                 const SizedBox(height: 32),
               ],

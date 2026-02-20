@@ -92,6 +92,9 @@ class UserPermissions extends Equatable {
   // ── Usuarios ──
   final ModulePermission usuarios;
 
+  // ── Ajustes ──
+  final ModulePermission ajustesEmpresa;
+
   const UserPermissions({
     this.cintas = const ModulePermission.none(),
     this.variedades = const ModulePermission.none(),
@@ -102,6 +105,7 @@ class UserPermissions extends Equatable {
     this.cosecha = const ModulePermission.none(),
     this.consultas = const ModulePermission.none(),
     this.usuarios = const ModulePermission.none(),
+    this.ajustesEmpresa = const ModulePermission.none(),
   });
 
   /// Acceso total (para el dueño de la empresa)
@@ -114,7 +118,8 @@ class UserPermissions extends Equatable {
       encintado = const ModulePermission.all(),
       cosecha = const ModulePermission.all(),
       consultas = const ModulePermission.readOnly(),
-      usuarios = const ModulePermission.all();
+      usuarios = const ModulePermission.all(),
+      ajustesEmpresa = const ModulePermission.all();
 
   /// Sin acceso (default para empleado nuevo)
   const UserPermissions.none()
@@ -126,7 +131,8 @@ class UserPermissions extends Equatable {
       encintado = const ModulePermission.none(),
       cosecha = const ModulePermission.none(),
       consultas = const ModulePermission.none(),
-      usuarios = const ModulePermission.none();
+      usuarios = const ModulePermission.none(),
+      ajustesEmpresa = const ModulePermission.none();
 
   // ── Helpers para saber si mostrar botones de módulo padre ──
 
@@ -157,6 +163,7 @@ class UserPermissions extends Equatable {
     ModulePermission? cosecha,
     ModulePermission? consultas,
     ModulePermission? usuarios,
+    ModulePermission? ajustesEmpresa,
   }) {
     return UserPermissions(
       cintas: cintas ?? this.cintas,
@@ -168,6 +175,7 @@ class UserPermissions extends Equatable {
       cosecha: cosecha ?? this.cosecha,
       consultas: consultas ?? this.consultas,
       usuarios: usuarios ?? this.usuarios,
+      ajustesEmpresa: ajustesEmpresa ?? this.ajustesEmpresa,
     );
   }
 
@@ -181,6 +189,7 @@ class UserPermissions extends Equatable {
     'cosecha': cosecha.toJson(),
     'consultas': consultas.toJson(),
     'usuarios': usuarios.toJson(),
+    'ajustesEmpresa': ajustesEmpresa.toJson(),
   };
 
   factory UserPermissions.fromJson(Map<String, dynamic>? json) {
@@ -211,6 +220,9 @@ class UserPermissions extends Equatable {
       usuarios: ModulePermission.fromJson(
         json['usuarios'] as Map<String, dynamic>?,
       ),
+      ajustesEmpresa: ModulePermission.fromJson(
+        json['ajustesEmpresa'] as Map<String, dynamic>?,
+      ),
     );
   }
 
@@ -225,5 +237,6 @@ class UserPermissions extends Equatable {
     cosecha,
     consultas,
     usuarios,
+    ajustesEmpresa,
   ];
 }

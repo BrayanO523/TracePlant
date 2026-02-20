@@ -64,6 +64,15 @@ class _ProduccionDashboardScreenState
 
   @override
   Widget build(BuildContext context) {
+    final canViewConsultas =
+        ref
+            .watch(currentUserStreamProvider)
+            .value
+            ?.effectivePermissions
+            .consultas
+            .ver ??
+        false;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(title: const Text('Producción'), centerTitle: true),
@@ -76,7 +85,11 @@ class _ProduccionDashboardScreenState
               padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
-                  _StatsGrid(stats: _stats, loading: _loading),
+                  _StatsGrid(
+                    stats: _stats,
+                    loading: _loading,
+                    canViewConsultas: canViewConsultas,
+                  ),
                   const SizedBox(height: 20),
                   // Aquí podría ir gráficos o actividad reciente
                 ],
@@ -145,8 +158,13 @@ class _ProduccionDashboardScreenState
 class _StatsGrid extends StatelessWidget {
   final Map<String, dynamic> stats;
   final bool loading;
+  final bool canViewConsultas;
 
-  const _StatsGrid({required this.stats, required this.loading});
+  const _StatsGrid({
+    required this.stats,
+    required this.loading,
+    required this.canViewConsultas,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -170,14 +188,16 @@ class _StatsGrid extends StatelessWidget {
               color: AppColors.info,
               label: 'Ciclos Activos',
               value: stats['ciclosActivos'].toString(),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => ConsultasScreen(
-                    productoraId: stats['productoraId'] ?? "",
-                  ),
-                ),
-              ),
+              onTap: canViewConsultas
+                  ? () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ConsultasScreen(
+                          productoraId: stats['productoraId'] ?? "",
+                        ),
+                      ),
+                    )
+                  : null,
             ),
             _StatCard(
               width: itemWidth,
@@ -185,14 +205,16 @@ class _StatsGrid extends StatelessWidget {
               color: AppColors.secondary,
               label: 'Lotes Activos',
               value: stats['lotesActivos'].toString(),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => ConsultasScreen(
-                    productoraId: stats['productoraId'] ?? "",
-                  ),
-                ),
-              ),
+              onTap: canViewConsultas
+                  ? () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ConsultasScreen(
+                          productoraId: stats['productoraId'] ?? "",
+                        ),
+                      ),
+                    )
+                  : null,
             ),
             _StatCard(
               width: itemWidth,
@@ -200,14 +222,16 @@ class _StatsGrid extends StatelessWidget {
               color: AppColors.primary,
               label: 'Cosecha Total',
               value: '${stats['volumenCosecha'].toStringAsFixed(1)} un',
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => InventarioCosechadoScreen(
-                    productoraId: stats['productoraId'] ?? "",
-                  ),
-                ),
-              ),
+              onTap: canViewConsultas
+                  ? () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => InventarioCosechadoScreen(
+                          productoraId: stats['productoraId'] ?? "",
+                        ),
+                      ),
+                    )
+                  : null,
             ),
             _StatCard(
               width: itemWidth,
@@ -215,14 +239,16 @@ class _StatsGrid extends StatelessWidget {
               color: AppColors.accent,
               label: 'En Cinta',
               value: '${stats['volumenEncintado'].toStringAsFixed(1)} un',
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => ProyeccionCosechaScreen(
-                    productoraId: stats['productoraId'] ?? "",
-                  ),
-                ),
-              ),
+              onTap: canViewConsultas
+                  ? () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ProyeccionCosechaScreen(
+                          productoraId: stats['productoraId'] ?? "",
+                        ),
+                      ),
+                    )
+                  : null,
             ),
           ],
         );

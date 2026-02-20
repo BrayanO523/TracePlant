@@ -174,10 +174,19 @@ class AuthRemoteDatasourceImpl implements AuthRemoteDatasource {
         .get();
     if (!doc.exists) {
       // Fallback if auth exists but no profile (edge case)
-      // For now throw error
       throw const NotFoundFailure('User profile not found');
     }
-    return UserModel.fromDocument(doc);
+
+    final user = UserModel.fromDocument(doc);
+
+    if (!user.isActive) {
+      await _auth.signOut();
+      throw const AuthFailure(
+        'Esta cuenta ha sido desactivada por el administrador.',
+      );
+    }
+
+    return user;
   }
 
   Future<UserModel> _recoverProfile(
