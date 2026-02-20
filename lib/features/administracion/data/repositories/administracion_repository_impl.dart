@@ -95,11 +95,16 @@ class AdministracionRepositoryImpl implements IAdministracionRepository {
   }
 
   @override
-  Stream<List<Cinta>> watchCintas() {
-    return Stream.fromFuture(_getProducerId()).asyncExpand((producerId) {
+  Stream<List<Cinta>> watchCintas({String? productoraId}) {
+    final streamId = productoraId != null
+        ? Stream.value(productoraId)
+        : Stream.fromFuture(_getProducerId());
+
+    return streamId.asyncExpand((pid) {
+      if (pid.isEmpty) return Stream.value([]);
       return _firestore
           .collection('cintas')
-          .where('productoraId', isEqualTo: producerId)
+          .where('productoraId', isEqualTo: pid)
           .snapshots()
           .map(
             (snapshot) => snapshot.docs
@@ -132,11 +137,16 @@ class AdministracionRepositoryImpl implements IAdministracionRepository {
   }
 
   @override
-  Stream<List<Variedad>> watchVariedades() {
-    return Stream.fromFuture(_getProducerId()).asyncExpand((producerId) {
+  Stream<List<Variedad>> watchVariedades({String? productoraId}) {
+    final streamId = productoraId != null
+        ? Stream.value(productoraId)
+        : Stream.fromFuture(_getProducerId());
+
+    return streamId.asyncExpand((pid) {
+      if (pid.isEmpty) return Stream.value([]);
       return _firestore
           .collection('variedades')
-          .where('productoraId', isEqualTo: producerId)
+          .where('productoraId', isEqualTo: pid)
           .snapshots()
           .map(
             (snapshot) => snapshot.docs

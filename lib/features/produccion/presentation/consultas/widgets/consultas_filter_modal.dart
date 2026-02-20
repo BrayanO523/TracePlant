@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../../../app/theme/app_colors.dart';
+import '../../../../administracion/domain/entities/cinta.dart';
+
 import '../viewmodels/consultas_notifier.dart';
 
 class ConsultasFilterModal extends ConsumerStatefulWidget {
@@ -23,7 +25,7 @@ class _ConsultasFilterModalState extends ConsumerState<ConsultasFilterModal> {
   DateTime? _endDate;
   String? _variedad;
   String? _cinta;
-  String? _lote;
+  String? _finca;
 
   @override
   void initState() {
@@ -35,7 +37,7 @@ class _ConsultasFilterModalState extends ConsumerState<ConsultasFilterModal> {
     _endDate = state.fechaFin;
     _variedad = state.variedadFilter;
     _cinta = state.cintaFilter;
-    _lote = state.loteFilter;
+    _finca = state.fincaFilter;
   }
 
   void _applyFilters() {
@@ -47,7 +49,8 @@ class _ConsultasFilterModalState extends ConsumerState<ConsultasFilterModal> {
           endDate: _endDate,
           variedadFilter: _variedad,
           cintaFilter: _cinta,
-          loteFilter: _lote,
+          fincaFilter: _finca,
+          loteFilter: null, // Limpiar filtro de lote si existía
         );
     Navigator.pop(context);
   }
@@ -59,7 +62,7 @@ class _ConsultasFilterModalState extends ConsumerState<ConsultasFilterModal> {
       _endDate = null;
       _variedad = null;
       _cinta = null;
-      _lote = null;
+      _finca = null;
     });
   }
 
@@ -104,39 +107,13 @@ class _ConsultasFilterModalState extends ConsumerState<ConsultasFilterModal> {
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.read(consultasProvider(widget.productoraId));
-    final allCiclos = state.ciclos; // Lista completa
+    // Usar watch para reactividad ante cambios de master data
+    final state = ref.watch(consultasProvider(widget.productoraId));
 
-    final variedades =
-        allCiclos
-            .map((c) => c.variedad)
-            .where((v) => v.isNotEmpty)
-            .toSet()
-            .toList()
-          ..sort();
+    // Master lists
+    final variedades = state.variedades.map((v) => v.nombre).toList()..sort();
 
-    final cintas = allCiclos
-        .expand(
-          (c) => c.encintados.map((e) => e.cintaColorHex),
-        ) // Usamos Hex para valor
-        .toSet()
-        .toList();
-    // Mapa para mostrar nombres bonitos si es necesario, pero Ciclo tiene nombre cinta?
-    // Extraemos mapa Hex -> Nombre
-    final mapCintaNombres = <String, String>{};
-    for (var c in allCiclos) {
-      for (var e in c.encintados) {
-        mapCintaNombres[e.cintaColorHex] = e.cintaNombre; // "Azul", "Rojo"
-      }
-    }
-
-    final lotes =
-        allCiclos
-            .map((c) => c.nombreLote)
-            .where((l) => l.isNotEmpty)
-            .toSet()
-            .toList()
-          ..sort();
+    final cintas = state.cintas; // List<Cinta> objects
 
     return DraggableScrollableSheet(
       initialChildSize: 0.85,
@@ -243,22 +220,25 @@ class _ConsultasFilterModalState extends ConsumerState<ConsultasFilterModal> {
                     const SizedBox(height: 16),
 
                     // Cinta
-                    _DropdownFilter<String>(
+                    _DropdownFilter<Cinta>(
                       label: 'Cinta',
                       items: cintas,
-                      selectedItem: _cinta,
-                      onChanged: (v) => setState(() => _cinta = v),
-                      itemAsString: (v) => mapCintaNombres[v] ?? v,
-                      // Renderizar color circle en dropdown si es posible
+                      selectedItem: cintas.cast<Cinta?>().firstWhere(
+                        (c) => c?.colorHex == _cinta,
+                        orElse: () => null,
+                      ),
+                      onChanged: (v) => setState(() => _cinta = v?.colorHex),
+                      itemAsString: (v) => v.color,
+                      compareFn: (i, s) => i.id == s.id, // Comparar por ID
                     ),
                     const SizedBox(height: 16),
 
-                    // Finca / Lote
+                    // Finca
                     _DropdownFilter<String>(
-                      label: 'Finca / Lote',
-                      items: lotes,
-                      selectedItem: _lote,
-                      onChanged: (v) => setState(() => _lote = v),
+                      label: 'Finca',
+                      items: state.fincas.map((f) => f.nombre).toList()..sort(),
+                      selectedItem: _finca,
+                      onChanged: (v) => setState(() => _finca = v),
                       itemAsString: (v) => v,
                     ),
 
@@ -437,6 +417,7 @@ class _DropdownFilter<T> extends StatelessWidget {
   final T? selectedItem;
   final ValueChanged<T?> onChanged;
   final String Function(T) itemAsString;
+  final bool Function(T, T)? compareFn; // Nuevo
 
   const _DropdownFilter({
     required this.label,
@@ -444,6 +425,7 @@ class _DropdownFilter<T> extends StatelessWidget {
     required this.selectedItem,
     required this.onChanged,
     required this.itemAsString,
+    this.compareFn,
   });
 
   @override
@@ -461,12 +443,11 @@ class _DropdownFilter<T> extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         DropdownSearch<T>(
-          items: (filter, loadProps) =>
-              items, // Fix for v9.0+ API if needed, check docs
+          items: (filter, loadProps) => items,
           selectedItem: selectedItem,
           onChanged: onChanged,
           itemAsString: itemAsString,
-          compareFn: (i, s) => i == s,
+          compareFn: compareFn ?? (i, s) => i == s, // Usar custom o default
           decoratorProps: DropDownDecoratorProps(
             decoration: InputDecoration(
               contentPadding: const EdgeInsets.symmetric(

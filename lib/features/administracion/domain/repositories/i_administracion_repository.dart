@@ -6,12 +6,12 @@ import '../entities/lote.dart';
 abstract class IAdministracionRepository {
   // Cintas
   Future<void> saveCinta(Cinta cinta);
-  Stream<List<Cinta>> watchCintas();
+  Stream<List<Cinta>> watchCintas({String? productoraId});
   Future<void> deleteCinta(String id);
 
   // Variedades
   Future<void> saveVariedad(Variedad variedad);
-  Stream<List<Variedad>> watchVariedades();
+  Stream<List<Variedad>> watchVariedades({String? productoraId});
   Future<void> deleteVariedad(String id);
 
   // Fincas

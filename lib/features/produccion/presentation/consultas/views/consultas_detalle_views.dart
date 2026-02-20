@@ -6,6 +6,7 @@ import '../../widgets/ciclo_timeline.dart';
 import '../widgets/consultas_filter_modal.dart';
 import '../../../../administracion/domain/entities/finca.dart';
 import '../../../domain/entities/lote.dart'; // Lote de Produccion
+import '../../views/lote_history_screen.dart';
 
 // ─── CONSULTA POR VARIEDAD ───────────────────────────────────────────────────
 class ConsultaVariedadView extends ConsumerWidget {
@@ -484,6 +485,48 @@ class _ResultadosConsultaViewState
                               Padding(
                                 padding: const EdgeInsets.all(16),
                                 child: CicloTimeline(ciclo: ciclo),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(
+                                  16,
+                                  0,
+                                  16,
+                                  12,
+                                ),
+                                child: OutlinedButton.icon(
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => LoteHistoryScreen(
+                                          productoraId: widget.productoraId,
+                                          loteId: ciclo.idLote,
+                                          nombreLote: ciclo.nombreLote,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(
+                                    Icons.history_rounded,
+                                    size: 18,
+                                  ),
+                                  label: const Text('Ver historial del lote'),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: AppColors.primary,
+                                    side: BorderSide(
+                                      color: AppColors.primary.withValues(
+                                        alpha: 0.3,
+                                      ),
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    minimumSize: const Size(
+                                      double.infinity,
+                                      40,
+                                    ),
+                                  ),
+                                ),
                               ),
                             ],
                           ),

@@ -7,6 +7,8 @@ import '../../../../../app/di/providers.dart';
 import '../../../domain/logic/encintado_cohortes_logic.dart'; // Import nuevo
 
 import '../../../../administracion/domain/entities/finca.dart';
+import '../../../../administracion/domain/entities/cinta.dart'; // Nuevo
+import '../../../../administracion/domain/entities/variedad.dart'; // Nuevo
 import '../../../domain/entities/lote.dart';
 
 // ── Modelo local para proyección ──
@@ -28,8 +30,10 @@ class ConsultasState {
 
   // Datos completos
   final List<CicloProduccion> ciclos;
-  final List<Finca> fincas; // Nuevo: Para jerarquía
-  final List<Lote> lotes; // Nuevo: Para jerarquía
+  final List<Finca> fincas;
+  final List<Lote> lotes;
+  final List<Cinta> cintas; // Nuevo: Master Data
+  final List<Variedad> variedades; // Nuevo: Master Data
 
   // Datos filtrados para mostrar
   final List<CicloProduccion> ciclosFiltrados;
@@ -64,6 +68,8 @@ class ConsultasState {
     this.ciclos = const [],
     this.fincas = const [],
     this.lotes = const [],
+    this.cintas = const [],
+    this.variedades = const [],
     this.ciclosFiltrados = const [],
     this.fechaInicio,
     this.fechaFin,
@@ -88,6 +94,8 @@ class ConsultasState {
     List<CicloProduccion>? ciclos,
     List<Finca>? fincas,
     List<Lote>? lotes,
+    List<Cinta>? cintas,
+    List<Variedad>? variedades,
     List<CicloProduccion>? ciclosFiltrados,
     DateTime? fechaInicio,
     DateTime? fechaFin,
@@ -111,6 +119,8 @@ class ConsultasState {
       ciclos: ciclos ?? this.ciclos,
       fincas: fincas ?? this.fincas,
       lotes: lotes ?? this.lotes,
+      cintas: cintas ?? this.cintas,
+      variedades: variedades ?? this.variedades,
       ciclosFiltrados: ciclosFiltrados ?? this.ciclosFiltrados,
       fechaInicio: fechaInicio ?? this.fechaInicio,
       fechaFin: fechaFin ?? this.fechaFin,
@@ -179,6 +189,21 @@ class ConsultasNotifier extends StateNotifier<ConsultasState> {
     repo.watchLotes(productoraId).listen((lotes) {
       if (mounted) state = state.copyWith(lotes: lotes);
     });
+
+    // Nuevo: Master Data de Cintas y Variedades
+    final adminRepo = ref.read(administracionRepositoryProvider);
+
+    adminRepo.watchCintas(productoraId: productoraId).listen((cintas) {
+      debugPrint('[Consultas] Cintas received from Repo: ${cintas.length}');
+      cintas.forEach(
+        (c) => debugPrint('[Consultas] Cinta: ${c.color} (${c.colorHex})'),
+      );
+      if (mounted) state = state.copyWith(cintas: cintas);
+    });
+
+    adminRepo.watchVariedades(productoraId: productoraId).listen((variedades) {
+      if (mounted) state = state.copyWith(variedades: variedades);
+    });
   }
 
   void _subscribeToCiclos() {
@@ -186,7 +211,6 @@ class ConsultasNotifier extends StateNotifier<ConsultasState> {
     final repo = ref.read(produccionRepositoryProvider);
 
     // Suscribirse al stream de ciclos ACTIVOS (escalabilidad)
-    // TODO: Para reportes históricos masivos, usar backend aggregation functions
     repo
         .watchCiclosActivos(productoraId)
         .listen(
@@ -230,6 +254,8 @@ class ConsultasNotifier extends StateNotifier<ConsultasState> {
         ciclos: state.ciclos,
         fincas: state.fincas,
         lotes: state.lotes,
+        cintas: state.cintas, // FIX: Preservar Master Data
+        variedades: state.variedades, // FIX: Preservar Master Data
         // Filtros nuevos (nulos si no se pasan)
         cintaFilter: cintaFilter,
         variedadFilter: variedadFilter,
@@ -266,6 +292,8 @@ class ConsultasNotifier extends StateNotifier<ConsultasState> {
       ciclos: state.ciclos,
       fincas: state.fincas,
       lotes: state.lotes,
+      cintas: state.cintas, // FIX: Preservar Master Data
+      variedades: state.variedades, // FIX: Preservar Master Data
       ciclosFiltrados: state.ciclos,
       fechaInicio: null,
       fechaFin: null,
