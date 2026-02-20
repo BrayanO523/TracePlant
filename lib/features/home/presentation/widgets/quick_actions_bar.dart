@@ -1,15 +1,78 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/constants/user_permissions.dart';
 import '../../../produccion/presentation/widgets/quick_actions_selector.dart';
 
+/// Barra de acciones rápidas (Sembrar, Encintar, Cosechar).
+/// Solo muestra los botones para los que el usuario tiene permiso de crear.
 class QuickActionsBar extends ConsumerWidget {
   final String productoraId;
+  final UserPermissions permissions;
 
-  const QuickActionsBar({super.key, required this.productoraId});
+  const QuickActionsBar({
+    super.key,
+    required this.productoraId,
+    required this.permissions,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Construir la lista de acciones según permisos
+    final actions = <Widget>[];
+
+    if (permissions.siembra.crear) {
+      actions.add(
+        _buildActionButton(
+          context,
+          icon: Icons.grass_rounded,
+          label: 'Sembrar',
+          color: AppColors.primary,
+          onTap: () => QuickActionsSelector.showSiembraSelector(
+            context,
+            ref,
+            productoraId,
+          ),
+        ),
+      );
+    }
+
+    if (permissions.encintado.crear) {
+      if (actions.isNotEmpty) actions.add(const SizedBox(width: 12));
+      actions.add(
+        _buildActionButton(
+          context,
+          icon: Icons.confirmation_number_rounded,
+          label: 'Encintar',
+          color: AppColors.secondary,
+          onTap: () => QuickActionsSelector.showEncintadoSelector(
+            context,
+            ref,
+            productoraId,
+          ),
+        ),
+      );
+    }
+
+    if (permissions.cosecha.crear) {
+      if (actions.isNotEmpty) actions.add(const SizedBox(width: 12));
+      actions.add(
+        _buildActionButton(
+          context,
+          icon: Icons.agriculture_rounded,
+          label: 'Cosechar',
+          color: AppColors.accent,
+          onTap: () => QuickActionsSelector.showCosechaSelector(
+            context,
+            ref,
+            productoraId,
+          ),
+        ),
+      );
+    }
+
+    if (actions.isEmpty) return const SizedBox.shrink();
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       decoration: BoxDecoration(
@@ -36,45 +99,7 @@ class QuickActionsBar extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 16),
-          Row(
-            children: [
-              _buildActionButton(
-                context,
-                icon: Icons.grass_rounded,
-                label: 'Sembrar',
-                color: AppColors.primary,
-                onTap: () => QuickActionsSelector.showSiembraSelector(
-                  context,
-                  ref,
-                  productoraId,
-                ),
-              ),
-              const SizedBox(width: 12),
-              _buildActionButton(
-                context,
-                icon: Icons.confirmation_number_rounded,
-                label: 'Encintar',
-                color: AppColors.secondary,
-                onTap: () => QuickActionsSelector.showEncintadoSelector(
-                  context,
-                  ref,
-                  productoraId,
-                ),
-              ),
-              const SizedBox(width: 12),
-              _buildActionButton(
-                context,
-                icon: Icons.agriculture_rounded,
-                label: 'Cosechar',
-                color: AppColors.accent,
-                onTap: () => QuickActionsSelector.showCosechaSelector(
-                  context,
-                  ref,
-                  productoraId,
-                ),
-              ),
-            ],
-          ),
+          Row(children: actions),
         ],
       ),
     );
@@ -120,7 +145,7 @@ class QuickActionsBar extends ConsumerWidget {
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
-                    color: color, // O AppColors.textPrimary si prefieres
+                    color: color,
                   ),
                 ),
               ],
