@@ -77,7 +77,7 @@ class ProyeccionCosechaScreen extends ConsumerWidget {
                       }) {
                         ref
                             .read(consultasProvider(productoraId).notifier)
-                            .setFilters(
+                            .replaceFilters(
                               sortAscending: sortAscending,
                               startDate: startDate,
                               endDate: endDate,
@@ -178,28 +178,34 @@ class ProyeccionCosechaScreen extends ConsumerWidget {
                     separatorBuilder: (_, __) => const SizedBox(height: 12),
                     itemBuilder: (context, index) {
                       final item = cohortes[index];
-                      // Resolver Finca y Lote
-                      final lote = state.lotes.cast<Lote>().firstWhere(
+                      // Resolver Finca y Lote de manera segura evitando firstWhere con orElse
+                      // para no chocar con el tipo dinámico de LoteModel/FincaModel
+                      final matchLotes = state.lotes.where(
                         (l) => l.id == item.loteId,
-                        orElse: () => const Lote(
-                          id: '',
-                          nombre: 'Desconocido',
-                          fincaId: '',
-                          idProductora: '',
-                          area: 0,
-                          variedad: 'Desconocida',
-                        ),
                       );
-                      final finca = state.fincas.cast<Finca>().firstWhere(
+                      final lote = matchLotes.isNotEmpty
+                          ? matchLotes.first
+                          : const Lote(
+                              id: '',
+                              nombre: 'Desconocido',
+                              fincaId: '',
+                              idProductora: '',
+                              area: 0,
+                              variedad: 'Desconocida',
+                            );
+
+                      final matchFincas = state.fincas.where(
                         (f) => f.id == lote.fincaId,
-                        orElse: () => const Finca(
-                          id: '',
-                          nombre: '',
-                          productoraId: '',
-                          ubicacion: '',
-                          areaTotal: 0,
-                        ),
                       );
+                      final finca = matchFincas.isNotEmpty
+                          ? matchFincas.first
+                          : const Finca(
+                              id: '',
+                              nombre: '',
+                              productoraId: '',
+                              ubicacion: '',
+                              areaTotal: 0,
+                            );
 
                       return CohorteCard(
                         cohorte: item,

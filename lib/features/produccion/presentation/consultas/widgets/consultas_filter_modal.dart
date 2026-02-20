@@ -43,7 +43,7 @@ class _ConsultasFilterModalState extends ConsumerState<ConsultasFilterModal> {
   void _applyFilters() {
     ref
         .read(consultasProvider(widget.productoraId).notifier)
-        .setFilters(
+        .replaceFilters(
           sortAscending: _sortAscending,
           startDate: _startDate,
           endDate: _endDate,
