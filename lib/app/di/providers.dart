@@ -16,6 +16,10 @@ import 'package:productoraempacadora/features/produccion/domain/repositories/pro
 import 'package:productoraempacadora/features/produccion/presentation/viewmodels/lotes_notifier.dart';
 import 'package:productoraempacadora/features/produccion/presentation/viewmodels/produccion_notifier.dart';
 
+import 'package:productoraempacadora/features/administracion/domain/entities/finca.dart'; // Finca
+import 'package:productoraempacadora/features/produccion/domain/entities/lote.dart'; // Lote
+import 'package:productoraempacadora/features/produccion/domain/entities/ciclo_produccion.dart'; // CicloProduccion
+
 // features/asignaciones
 import 'package:productoraempacadora/features/asignaciones/data/datasources/asignaciones_remote_datasource.dart';
 import 'package:productoraempacadora/features/asignaciones/data/repositories/asignaciones_repository_impl.dart';
@@ -32,6 +36,13 @@ import 'package:productoraempacadora/features/administracion/data/repositories/a
 import 'package:productoraempacadora/features/administracion/domain/repositories/i_administracion_repository.dart';
 import 'package:productoraempacadora/features/administracion/domain/entities/variedad.dart';
 import 'package:productoraempacadora/features/administracion/domain/entities/cinta.dart';
+
+// features/usuarios
+import 'package:productoraempacadora/core/constants/role_constants.dart';
+import 'package:productoraempacadora/features/usuarios/data/datasources/users_remote_datasource.dart';
+import 'package:productoraempacadora/features/usuarios/data/repositories/users_repository_impl.dart';
+import 'package:productoraempacadora/features/usuarios/domain/repositories/users_repository.dart';
+import 'package:productoraempacadora/features/usuarios/presentation/viewmodels/users_notifier.dart';
 
 // ═══════════════════════════════════════════════════════
 //  CORE & EXTERNAL
@@ -145,6 +156,27 @@ final produccionNotifierProvider =
       );
     });
 
+final fincasStreamProviderFamily = StreamProvider.family<List<Finca>, String>((
+  ref,
+  productoraId,
+) {
+  return ref.watch(produccionRepositoryProvider).watchFincas(productoraId);
+});
+
+final lotesStreamProviderFamily = StreamProvider.family<List<Lote>, String>((
+  ref,
+  productoraId,
+) {
+  return ref.watch(produccionRepositoryProvider).watchLotes(productoraId);
+});
+
+final ciclosActivosStreamProviderFamily =
+    StreamProvider.family<List<CicloProduccion>, String>((ref, productoraId) {
+      return ref
+          .watch(produccionRepositoryProvider)
+          .watchCiclosActivos(productoraId);
+    });
+
 // ═══════════════════════════════════════════════════════
 //  ADMINISTRACION FEATURE
 // ═══════════════════════════════════════════════════════
@@ -162,8 +194,24 @@ final variedadesStreamProvider = StreamProvider<List<Variedad>>((ref) {
   return ref.watch(administracionRepositoryProvider).watchVariedades();
 });
 
+final variedadesStreamProviderFamily =
+    StreamProvider.family<List<Variedad>, String>((ref, productoraId) {
+      return ref
+          .watch(administracionRepositoryProvider)
+          .watchVariedades(productoraId: productoraId);
+    });
+
 final cintasStreamProvider = StreamProvider<List<Cinta>>((ref) {
   return ref.watch(administracionRepositoryProvider).watchCintas();
+});
+
+final cintasStreamProviderFamily = StreamProvider.family<List<Cinta>, String>((
+  ref,
+  productoraId,
+) {
+  return ref
+      .watch(administracionRepositoryProvider)
+      .watchCintas(productoraId: productoraId);
 });
 
 // ═══════════════════════════════════════════════════════
@@ -209,5 +257,32 @@ final empacadoraDashboardProvider =
       return EmpacadoraDashboardNotifier(
         ref.read(empacadoraRepositoryProvider),
         empacadoraId,
+      );
+    });
+
+// ═══════════════════════════════════════════════════════
+//  USUARIOS FEATURE
+// ═══════════════════════════════════════════════════════
+
+final usersDatasourceProvider = Provider<UsersRemoteDatasource>((ref) {
+  return UsersRemoteDatasourceImpl(ref.read(firestoreProvider));
+});
+
+final usersRepositoryProvider = Provider<UsersRepository>((ref) {
+  return UsersRepositoryImpl(ref.read(usersDatasourceProvider));
+});
+
+/// Typedef para el key del family provider
+typedef UsersProviderKey = ({String companyId, UserRole companyRole});
+
+final usersNotifierProvider =
+    StateNotifierProvider.family<UsersNotifier, UsersState, UsersProviderKey>((
+      ref,
+      key,
+    ) {
+      return UsersNotifier(
+        repository: ref.read(usersRepositoryProvider),
+        companyId: key.companyId,
+        companyRole: key.companyRole,
       );
     });
