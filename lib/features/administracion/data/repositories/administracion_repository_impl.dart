@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../domain/entities/cinta.dart';
 import '../../domain/entities/finca.dart';
@@ -55,9 +54,6 @@ class AdministracionRepositoryImpl implements IAdministracionRepository {
         if (query.docs.isNotEmpty) {
           final foundId = query.docs.first.id;
           if (foundId != empresaId) {
-            debugPrint(
-              '⚠️ [Repository] Auto-corrigiendo ID Productora: $foundId (era: $empresaId)',
-            );
             empresaId = foundId;
 
             // Opcional: Persistir la corrección en el usuario para futuras sesiones
@@ -65,7 +61,7 @@ class AdministracionRepositoryImpl implements IAdministracionRepository {
           }
         }
       } catch (e) {
-        debugPrint('⚠️ [Repository] Error en auto-corrección de ID: $e');
+        // Ignored
       }
     }
 

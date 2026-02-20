@@ -1,5 +1,5 @@
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../domain/entities/ciclo_produccion.dart';
 import '../../../domain/entities/produccion_enums.dart';
@@ -162,13 +162,12 @@ class ConsultasNotifier extends StateNotifier<ConsultasState> {
       if (doc.exists && mounted) {
         final raw = doc.data()?['semanas_para_cosecha'];
         final semanas = (raw as num?)?.toInt() ?? 30;
-        debugPrint('[Consultas] semanas_para_cosecha leído: $raw → $semanas');
         state = state.copyWith(semanasParaCosecha: semanas);
         // Recalcular proyecciones con el valor real
         _calculateProyecciones();
       }
     } catch (e) {
-      debugPrint('[Consultas] Error leyendo semanas_para_cosecha: $e');
+      // Ignore
     }
   }
 
@@ -194,10 +193,6 @@ class ConsultasNotifier extends StateNotifier<ConsultasState> {
     final adminRepo = ref.read(administracionRepositoryProvider);
 
     adminRepo.watchCintas(productoraId: productoraId).listen((cintas) {
-      debugPrint('[Consultas] Cintas received from Repo: ${cintas.length}');
-      cintas.forEach(
-        (c) => debugPrint('[Consultas] Cinta: ${c.color} (${c.colorHex})'),
-      );
       if (mounted) state = state.copyWith(cintas: cintas);
     });
 
@@ -286,6 +281,45 @@ class ConsultasNotifier extends StateNotifier<ConsultasState> {
     _applyFilters();
   }
 
+  void replaceFilters({
+    bool sortAscending = false,
+    DateTime? startDate,
+    DateTime? endDate,
+    String? cintaFilter,
+    String? variedadFilter,
+    String? loteFilter,
+    String? fincaFilter,
+  }) {
+    state = ConsultasState(
+      isLoading: state.isLoading,
+      error: state.error,
+      ciclos: state.ciclos,
+      fincas: state.fincas,
+      lotes: state.lotes,
+      cintas: state.cintas,
+      variedades: state.variedades,
+      ciclosFiltrados: state.ciclosFiltrados,
+      totalEncintado: state.totalEncintado,
+      totalCosechado: state.totalCosechado,
+      totalCiclos: state.totalCiclos,
+      inventario: state.inventario,
+      totalInventario: state.totalInventario,
+      semanasParaCosecha: state.semanasParaCosecha,
+      proximasCosechas: state.proximasCosechas,
+      cohortes: state.cohortes,
+
+      // Exact nullable overrides
+      sortAscending: sortAscending,
+      fechaInicio: startDate,
+      fechaFin: endDate,
+      cintaFilter: cintaFilter,
+      variedadFilter: variedadFilter,
+      loteFilter: loteFilter,
+      fincaFilter: fincaFilter,
+    );
+    _applyFilters();
+  }
+
   void clearFilters() {
     state = ConsultasState(
       isLoading: state.isLoading,
@@ -351,23 +385,17 @@ class ConsultasNotifier extends StateNotifier<ConsultasState> {
     // 4.5. Filtro de Finca (Por Nombre)
     if (state.fincaFilter != null && state.fincaFilter!.isNotEmpty) {
       // Resolver ID de finca
-      final finca = state.fincas.firstWhere(
-        (f) => f.nombre == state.fincaFilter,
-        orElse: () => Finca(
-          id: '',
-          nombre: '',
-          productoraId: '',
-          ubicacion: '',
-          areaTotal: 0,
-        ),
-      );
-      if (finca.id.isNotEmpty) {
+      final matches = state.fincas.where((f) => f.nombre == state.fincaFilter);
+      if (matches.isNotEmpty) {
+        final fincaId = matches.first.id;
         // Buscar lotes de esa finca
         final lotesIds = state.lotes
-            .where((l) => l.fincaId == finca.id)
+            .where((l) => l.fincaId == fincaId)
             .map((l) => l.id)
             .toSet();
         filtered = filtered.where((c) => lotesIds.contains(c.idLote)).toList();
+      } else {
+        filtered = [];
       }
     }
 
