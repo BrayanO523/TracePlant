@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../../app/di/providers.dart';
 import '../../../../../app/theme/app_colors.dart';
 import '../../../../../core/constants/firestore_paths.dart';
 import '../viewmodels/consultas_notifier.dart';
@@ -72,6 +73,11 @@ class _ConsultasScreenState extends ConsumerState<ConsultasScreen> {
     // Asegurar carga de datos
     ref.watch(consultasProvider(widget.productoraId));
 
+    // Obtener permisos del usuario actual
+    final userAsync = ref.watch(currentUserStreamProvider);
+    final perms = userAsync.value?.effectivePermissions;
+    final canExport = perms?.consultas.crear ?? false;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
       appBar: AppBar(
@@ -87,8 +93,10 @@ class _ConsultasScreenState extends ConsumerState<ConsultasScreen> {
         centerTitle: true,
         iconTheme: const IconThemeData(color: AppColors.textPrimary),
         actions: [
-          ExportButton(onTap: _exportarReporte, isLoading: false),
-          const SizedBox(width: 8),
+          if (canExport) ...[
+            ExportButton(onTap: _exportarReporte, isLoading: false),
+            const SizedBox(width: 8),
+          ],
         ],
       ),
       body: RefreshIndicator(

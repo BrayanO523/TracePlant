@@ -43,6 +43,7 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
   Cinta? _cintaSeleccionada;
   final _cantidadEncintadoController = TextEditingController();
   DateTime _fechaSeleccionada = DateTime.now();
+  bool _cosechaPreFilled = false; // Para pre-llenar solo una vez
 
   // Estado local para mostrar formulario de agregar encintado
   bool _showEncintadoForm = false;
@@ -127,6 +128,17 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
         )
         .toList();
     final ciclo = cicloActivo.isNotEmpty ? cicloActivo.first : null;
+
+    // Pre-llenar cantidad cosechada con el total del último encintado (solo una vez)
+    if (!_cosechaPreFilled &&
+        paso == TipoEvento.cosecha &&
+        ciclo != null &&
+        ciclo.totalEncintado > 0) {
+      _cosechaPreFilled = true;
+      _cantidadEncintadoController.text = ciclo.totalEncintado.toStringAsFixed(
+        2,
+      );
+    }
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA), // Surface gris suave
@@ -491,7 +503,9 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
   }
 
   Widget _buildSiembraFields() {
-    final variedadesAsync = ref.watch(variedadesStreamProvider);
+    final variedadesAsync = ref.watch(
+      variedadesStreamProviderFamily(widget.productoraId),
+    );
     return Column(
       children: [
         TextFormField(
@@ -647,7 +661,9 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
   }
 
   Widget _buildEncintadoFields(ThemeData theme, CicloProduccion? ciclo) {
-    final cintasAsync = ref.watch(cintasStreamProvider);
+    final cintasAsync = ref.watch(
+      cintasStreamProviderFamily(widget.productoraId),
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -659,16 +675,24 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
               'Color de Cinta',
               style: TextStyle(fontWeight: FontWeight.w600),
             ),
-            TextButton.icon(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const CintasScreen()),
-                );
-              },
-              icon: const Icon(Icons.add_circle_outline, size: 18),
-              label: const Text('Gestionar Cintas'),
-            ),
+            // Solo mostrar si el usuario puede gestionar cintas
+            if (ref
+                    .watch(currentUserStreamProvider)
+                    .value
+                    ?.effectivePermissions
+                    .cintas
+                    .crear ??
+                false)
+              TextButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const CintasScreen()),
+                  );
+                },
+                icon: const Icon(Icons.add_circle_outline, size: 18),
+                label: const Text('Gestionar Cintas'),
+              ),
           ],
         ),
         const SizedBox(height: 12),
