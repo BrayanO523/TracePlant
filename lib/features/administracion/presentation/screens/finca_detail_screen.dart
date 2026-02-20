@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:productoraempacadora/features/administracion/presentation/providers/admin_view_model.dart';
+import '../../../../app/di/providers.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../domain/entities/finca.dart';
 import '../providers/administracion_provider.dart';
@@ -14,6 +15,13 @@ class FincaDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final lotesAsync = ref.watch(lotesByFincaStreamProvider(finca.id));
+
+    // Obtener permisos del usuario actual
+    final userAsync = ref.watch(currentUserStreamProvider);
+    final perms = userAsync.value?.effectivePermissions;
+    final canCreateLote = perms?.lotes.crear ?? false;
+    final canEditLote = perms?.lotes.editar ?? false;
+    final canDeleteLote = perms?.lotes.eliminar ?? false;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -99,14 +107,16 @@ class FincaDetailScreen extends ConsumerWidget {
                             color: AppColors.textSecondary,
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        const Text(
-                          'Toca + para agregar un lote',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: AppColors.textHint,
+                        if (canCreateLote) ...[
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Toca + para agregar un lote',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: AppColors.textHint,
+                            ),
                           ),
-                        ),
+                        ],
                       ],
                     ),
                   );
@@ -171,29 +181,31 @@ class FincaDetailScreen extends ConsumerWidget {
                               ],
                             ),
                           ),
-                          IconButton(
-                            icon: Icon(
-                              Icons.edit_outlined,
-                              color: AppColors.info,
-                              size: 20,
-                            ),
-                            onPressed: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    LoteFormScreen(finca: finca, lote: lote),
+                          if (canEditLote)
+                            IconButton(
+                              icon: Icon(
+                                Icons.edit_outlined,
+                                color: AppColors.info,
+                                size: 20,
+                              ),
+                              onPressed: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      LoteFormScreen(finca: finca, lote: lote),
+                                ),
                               ),
                             ),
-                          ),
-                          IconButton(
-                            icon: const Icon(
-                              Icons.delete_outline_rounded,
-                              color: AppColors.error,
-                              size: 20,
+                          if (canDeleteLote)
+                            IconButton(
+                              icon: const Icon(
+                                Icons.delete_outline_rounded,
+                                color: AppColors.error,
+                                size: 20,
+                              ),
+                              onPressed: () =>
+                                  _confirmDeleteLote(context, ref, lote.id),
                             ),
-                            onPressed: () =>
-                                _confirmDeleteLote(context, ref, lote.id),
-                          ),
                         ],
                       ),
                     );
@@ -213,17 +225,21 @@ class FincaDetailScreen extends ConsumerWidget {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => LoteFormScreen(finca: finca)),
-          );
-        },
-        child: const Icon(Icons.add_rounded),
-      ),
+      floatingActionButton: canCreateLote
+          ? FloatingActionButton(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => LoteFormScreen(finca: finca),
+                  ),
+                );
+              },
+              child: const Icon(Icons.add_rounded),
+            )
+          : null,
     );
   }
 

@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../app/di/providers.dart';
 import '../../../../app/theme/app_colors.dart';
 
 import 'cintas_screen.dart';
 import 'variedades_screen.dart';
 import 'fincas_screen.dart';
 
-class AdminDashboardScreen extends StatelessWidget {
+class AdminDashboardScreen extends ConsumerWidget {
   const AdminDashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final userAsync = ref.watch(currentUserStreamProvider);
+    final perms = userAsync.value?.effectivePermissions;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: CustomScrollView(
@@ -75,38 +80,47 @@ class AdminDashboardScreen extends StatelessWidget {
             padding: const EdgeInsets.all(20),
             sliver: SliverList(
               delegate: SliverChildListDelegate([
-                _AdminCard(
-                  title: 'Colores de Cinta',
-                  subtitle: 'Definir códigos de colores y semanas de cosecha',
-                  icon: Icons.palette_rounded,
-                  color: AppColors.accent,
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const CintasScreen()),
+                if (perms?.cintas.ver == true) ...[
+                  _AdminCard(
+                    title: 'Colores de Cinta',
+                    subtitle: 'Definir códigos de colores y semanas de cosecha',
+                    icon: Icons.palette_rounded,
+                    color: AppColors.accent,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const CintasScreen()),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 14),
-                _AdminCard(
-                  title: 'Variedades',
-                  subtitle: 'Catálogo de variedades de producto',
-                  icon: Icons.local_florist_rounded,
-                  color: AppColors.primary,
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const VariedadesScreen()),
+                  const SizedBox(height: 14),
+                ],
+                if (perms?.variedades.ver == true) ...[
+                  _AdminCard(
+                    title: 'Variedades',
+                    subtitle: 'Catálogo de variedades de producto',
+                    icon: Icons.local_florist_rounded,
+                    color: AppColors.primary,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const VariedadesScreen(),
+                      ),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 14),
-                _AdminCard(
-                  title: 'Fincas y Lotes',
-                  subtitle: 'Gestionar fincas y sus lotes de producción',
-                  icon: Icons.landscape_rounded,
-                  color: AppColors.tertiary,
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const FincasScreen()),
+                  const SizedBox(height: 14),
+                ],
+                if (perms?.fincas.ver == true) ...[
+                  _AdminCard(
+                    title: 'Fincas y Lotes',
+                    subtitle: 'Gestionar fincas y sus lotes de producción',
+                    icon: Icons.landscape_rounded,
+                    color: AppColors.tertiary,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const FincasScreen()),
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 14),
+                ],
                 // Espacio extra al final
                 const SizedBox(height: 40),
               ]),

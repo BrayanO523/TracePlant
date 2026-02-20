@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../app/di/providers.dart' show currentUserStreamProvider;
 import '../../../../app/theme/app_colors.dart';
 import '../providers/administracion_provider.dart';
 import '../providers/admin_view_model.dart';
@@ -11,6 +12,13 @@ class VariedadesScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final variedadesAsync = ref.watch(variedadesStreamProvider);
+
+    // Permisos del usuario actual
+    final userAsync = ref.watch(currentUserStreamProvider);
+    final perms = userAsync.value?.effectivePermissions;
+    final canCreate = perms?.variedades.crear ?? false;
+    final canEdit = perms?.variedades.editar ?? false;
+    final canDelete = perms?.variedades.eliminar ?? false;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -45,7 +53,7 @@ class VariedadesScreen extends ConsumerWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const SizedBox(height: 20), // Compensar status bar
+                    const SizedBox(height: 20),
                     Container(
                       width: 56,
                       height: 56,
@@ -94,14 +102,16 @@ class VariedadesScreen extends ConsumerWidget {
                             color: AppColors.textSecondary,
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'Toca + para agregar una variedad',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: AppColors.textHint,
+                        if (canCreate) ...[
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Toca + para agregar una variedad',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: AppColors.textHint,
+                            ),
                           ),
-                        ),
+                        ],
                       ],
                     ),
                   ),
@@ -112,20 +122,21 @@ class VariedadesScreen extends ConsumerWidget {
                 sliver: SliverList(
                   delegate: SliverChildBuilderDelegate((context, index) {
                     final variedad = variedades[index];
-                    // ... (El resto del código de la tarjeta se mantiene igual, solo copio y pego la lógica)
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 10),
                       child: Material(
                         color: Colors.transparent,
                         child: InkWell(
                           borderRadius: BorderRadius.circular(16),
-                          onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  VariedadFormScreen(variedad: variedad),
-                            ),
-                          ),
+                          onTap: canEdit
+                              ? () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        VariedadFormScreen(variedad: variedad),
+                                  ),
+                                )
+                              : null,
                           child: Container(
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
@@ -186,15 +197,19 @@ class VariedadesScreen extends ConsumerWidget {
                                     ],
                                   ),
                                 ),
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.delete_outline_rounded,
-                                    color: AppColors.error,
-                                    size: 22,
+                                if (canDelete)
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.delete_outline_rounded,
+                                      color: AppColors.error,
+                                      size: 22,
+                                    ),
+                                    onPressed: () => _confirmDelete(
+                                      context,
+                                      ref,
+                                      variedad.id,
+                                    ),
                                   ),
-                                  onPressed: () =>
-                                      _confirmDelete(context, ref, variedad.id),
-                                ),
                               ],
                             ),
                           ),
@@ -223,15 +238,17 @@ class VariedadesScreen extends ConsumerWidget {
           const SliverPadding(padding: EdgeInsets.only(bottom: 80)),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        onPressed: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const VariedadFormScreen()),
-        ),
-        child: const Icon(Icons.add_rounded),
-      ),
+      floatingActionButton: canCreate
+          ? FloatingActionButton(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const VariedadFormScreen()),
+              ),
+              child: const Icon(Icons.add_rounded),
+            )
+          : null,
     );
   }
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../app/di/providers.dart' show currentUserStreamProvider;
 import '../../../../app/theme/app_colors.dart';
 import '../providers/administracion_provider.dart';
 import '../providers/admin_view_model.dart';
@@ -13,6 +14,13 @@ class FincasScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final fincasAsync = ref.watch(fincasStreamProvider);
+
+    // Permisos del usuario actual
+    final userAsync = ref.watch(currentUserStreamProvider);
+    final perms = userAsync.value?.effectivePermissions;
+    final canCreate = perms?.fincas.crear ?? false;
+    final canEdit = perms?.fincas.editar ?? false;
+    final canDelete = perms?.fincas.eliminar ?? false;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -44,14 +52,16 @@ class FincasScreen extends ConsumerWidget {
                             color: AppColors.textSecondary,
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'Toca + para agregar una finca',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: AppColors.textHint,
+                        if (canCreate) ...[
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Toca + para agregar una finca',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: AppColors.textHint,
+                            ),
                           ),
-                        ),
+                        ],
                       ],
                     ),
                   ),
@@ -68,6 +78,7 @@ class FincasScreen extends ConsumerWidget {
                         color: Colors.transparent,
                         child: InkWell(
                           borderRadius: BorderRadius.circular(16),
+                          // Ver detalle siempre disponible (es solo ver)
                           onTap: () => Navigator.push(
                             context,
                             MaterialPageRoute(
@@ -143,34 +154,36 @@ class FincasScreen extends ConsumerWidget {
                                 Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    IconButton(
-                                      icon: Icon(
-                                        Icons.edit_outlined,
-                                        color: AppColors.info,
-                                        size: 20,
-                                      ),
-                                      tooltip: 'Editar finca',
-                                      onPressed: () => Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (_) =>
-                                              FincaFormScreen(finca: finca),
+                                    if (canEdit)
+                                      IconButton(
+                                        icon: Icon(
+                                          Icons.edit_outlined,
+                                          color: AppColors.info,
+                                          size: 20,
+                                        ),
+                                        tooltip: 'Editar finca',
+                                        onPressed: () => Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) =>
+                                                FincaFormScreen(finca: finca),
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(
-                                        Icons.delete_outline_rounded,
-                                        color: AppColors.error,
-                                        size: 20,
+                                    if (canDelete)
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.delete_outline_rounded,
+                                          color: AppColors.error,
+                                          size: 20,
+                                        ),
+                                        tooltip: 'Eliminar finca',
+                                        onPressed: () => _confirmDelete(
+                                          context,
+                                          ref,
+                                          finca.id,
+                                        ),
                                       ),
-                                      tooltip: 'Eliminar finca',
-                                      onPressed: () => _confirmDelete(
-                                        context,
-                                        ref,
-                                        finca.id,
-                                      ),
-                                    ),
                                   ],
                                 ),
                               ],
@@ -201,15 +214,17 @@ class FincasScreen extends ConsumerWidget {
           const SliverPadding(padding: EdgeInsets.only(bottom: 80)),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        onPressed: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const FincaFormScreen()),
-        ),
-        child: const Icon(Icons.add_rounded),
-      ),
+      floatingActionButton: canCreate
+          ? FloatingActionButton(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const FincaFormScreen()),
+              ),
+              child: const Icon(Icons.add_rounded),
+            )
+          : null,
     );
   }
 

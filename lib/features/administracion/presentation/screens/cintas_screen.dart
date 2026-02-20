@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../app/di/providers.dart' hide cintasStreamProvider;
 import '../../../../app/theme/app_colors.dart';
 import '../providers/administracion_provider.dart';
 import '../providers/admin_view_model.dart';
@@ -12,6 +13,13 @@ class CintasScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final cintasAsync = ref.watch(cintasStreamProvider);
+
+    // Obtener permisos del usuario actual
+    final userAsync = ref.watch(currentUserStreamProvider);
+    final perms = userAsync.value?.effectivePermissions;
+    final canCreate = perms?.cintas.crear ?? false;
+    final canEdit = perms?.cintas.editar ?? false;
+    final canDelete = perms?.cintas.eliminar ?? false;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -43,14 +51,16 @@ class CintasScreen extends ConsumerWidget {
                             color: AppColors.textSecondary,
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'Toca + para agregar un color',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: AppColors.textHint,
+                        if (canCreate) ...[
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Toca + para agregar un color',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: AppColors.textHint,
+                            ),
                           ),
-                        ),
+                        ],
                       ],
                     ),
                   ),
@@ -68,12 +78,15 @@ class CintasScreen extends ConsumerWidget {
                         color: Colors.transparent,
                         child: InkWell(
                           borderRadius: BorderRadius.circular(16),
-                          onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => CintaFormScreen(cinta: cinta),
-                            ),
-                          ),
+                          onTap: canEdit
+                              ? () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        CintaFormScreen(cinta: cinta),
+                                  ),
+                                )
+                              : null,
                           child: Container(
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
@@ -139,15 +152,17 @@ class CintasScreen extends ConsumerWidget {
                                     ],
                                   ),
                                 ),
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.delete_outline_rounded,
-                                    color: AppColors.error,
-                                    size: 22,
+                                // Solo mostrar botón eliminar si tiene permiso
+                                if (canDelete)
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.delete_outline_rounded,
+                                      color: AppColors.error,
+                                      size: 22,
+                                    ),
+                                    onPressed: () =>
+                                        _confirmDelete(context, ref, cinta.id),
                                   ),
-                                  onPressed: () =>
-                                      _confirmDelete(context, ref, cinta.id),
-                                ),
                               ],
                             ),
                           ),
@@ -176,15 +191,18 @@ class CintasScreen extends ConsumerWidget {
           const SliverPadding(padding: EdgeInsets.only(bottom: 80)),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        onPressed: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const CintaFormScreen()),
-        ),
-        child: const Icon(Icons.add_rounded),
-      ),
+      // Solo mostrar FAB de crear si tiene permiso
+      floatingActionButton: canCreate
+          ? FloatingActionButton(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const CintaFormScreen()),
+              ),
+              child: const Icon(Icons.add_rounded),
+            )
+          : null,
     );
   }
 
