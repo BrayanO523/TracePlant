@@ -7,6 +7,7 @@ import '../di/providers.dart';
 import '../../../core/constants/role_constants.dart';
 import '../../../features/auth/presentation/views/login_screen.dart';
 import '../../../features/auth/presentation/views/register_screen.dart';
+import '../../../features/auth/domain/entities/app_user.dart';
 import '../../../features/asignaciones/presentation/views/admin_home_screen.dart';
 import '../../../features/produccion/presentation/views/produccion_dashboard_screen.dart';
 import '../../../features/produccion/presentation/consultas/views/consultas_screen.dart';
@@ -15,13 +16,20 @@ import '../../../features/empacadora/presentation/views/empacadora_home_screen.d
 // Placeholders are defined at the bottom of this file
 
 final goRouterProvider = Provider<GoRouter>((ref) {
-  final userState = ref.watch(currentUserStreamProvider);
-  final authRepository = ref.watch(authRepositoryProvider);
+  // Escuchar a Firestore (AppUser real) usando un Notifier para no reconstruir TODO el Router
+  final authStateNotifier = ValueNotifier<AsyncValue<AppUser?>>(
+    const AsyncLoading(),
+  );
+
+  ref.listen<AsyncValue<AppUser?>>(currentUserStreamProvider, (_, next) {
+    authStateNotifier.value = next;
+  }, fireImmediately: true);
 
   return GoRouter(
     initialLocation: '/',
-    refreshListenable: GoRouterRefreshStream(authRepository.authStateChanges),
+    refreshListenable: authStateNotifier,
     redirect: (context, state) {
+      final userState = authStateNotifier.value;
       final user = userState.asData?.value;
       final isLoggedIn = user != null;
       final isLoggingIn =
@@ -66,7 +74,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         path: '/productora',
         builder: (context, state) {
           // Obtener productoraId del usuario logueado
-          final user = userState.asData?.value;
+          final user = authStateNotifier.value.asData?.value;
           final productoraId = user?.companyId ?? '';
           return ProduccionDashboardScreen(productoraId: productoraId);
         },
@@ -74,7 +82,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'consultas',
             builder: (context, state) {
-              final user = userState.asData?.value;
+              final user = authStateNotifier.value.asData?.value;
               final productoraId = user?.companyId ?? '';
               return ConsultasScreen(productoraId: productoraId);
             },
@@ -88,7 +96,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/',
         redirect: (context, state) {
-          final user = userState.asData?.value;
+          final user = authStateNotifier.value.asData?.value;
           if (user == null) return '/login';
           switch (user.role) {
             case UserRole.admin:
