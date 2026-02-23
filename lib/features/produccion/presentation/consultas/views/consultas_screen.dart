@@ -70,8 +70,8 @@ class _ConsultasScreenState extends ConsumerState<ConsultasScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Asegurar carga de datos
-    ref.watch(consultasProvider(widget.productoraId));
+    // Asegurar carga de datos y reaccionar al estado
+    final state = ref.watch(consultasProvider(widget.productoraId));
 
     // Obtener permisos del usuario actual
     final userAsync = ref.watch(currentUserStreamProvider);
@@ -109,6 +109,9 @@ class _ConsultasScreenState extends ConsumerState<ConsultasScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              _buildTopSummary(state),
+              const SizedBox(height: 24),
+
               const Text(
                 'Seleccione una categoría',
                 style: TextStyle(
@@ -197,7 +200,7 @@ class _ConsultasScreenState extends ConsumerState<ConsultasScreen> {
               ),
               const SizedBox(height: 12),
               _ToolOptionTile(
-                title: 'Inventario Cosechado',
+                title: 'Cosechado',
                 subtitle: 'Lotes cosechados pendientes de entrega',
                 icon: Icons.inventory_2_rounded,
                 color: Colors.orange,
@@ -213,6 +216,138 @@ class _ConsultasScreenState extends ConsumerState<ConsultasScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildTopSummary(ConsultasState state) {
+    if (state.isLoading) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(16.0),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Resumen Global',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 16),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final cardWidth = (constraints.maxWidth - 16) / 2;
+            return Wrap(
+              spacing: 16,
+              runSpacing: 16,
+              children: [
+                _GlobalStatCard(
+                  title: 'Ciclos Activos',
+                  value: state.totalCiclos.toString(),
+                  icon: Icons.loop_rounded,
+                  color: AppColors.info,
+                  width: cardWidth,
+                ),
+                _GlobalStatCard(
+                  title: 'Total Encintado',
+                  value: state.totalEncintado.toStringAsFixed(0),
+                  icon: Icons.loyalty_rounded,
+                  color: AppColors.warning,
+                  width: cardWidth,
+                ),
+                _GlobalStatCard(
+                  title: 'A Cosechar',
+                  value: state.totalInventario.toStringAsFixed(0),
+                  icon: Icons.inventory_2_rounded,
+                  color: Colors.orange,
+                  width: cardWidth,
+                ),
+                _GlobalStatCard(
+                  title: 'Total Cosechado',
+                  value: state.totalCosechado.toStringAsFixed(0),
+                  icon: Icons.content_cut_rounded,
+                  color: AppColors.error,
+                  width: cardWidth,
+                ),
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
+} // <- End of _ConsultasScreenState
+
+class _GlobalStatCard extends StatelessWidget {
+  final String title;
+  final String value;
+  final IconData icon;
+  final Color color;
+  final double width;
+
+  const _GlobalStatCard({
+    required this.title,
+    required this.value,
+    required this.icon,
+    required this.color,
+    required this.width,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: color, size: 24),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 13,
+              color: AppColors.textSecondary,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
       ),
     );
   }

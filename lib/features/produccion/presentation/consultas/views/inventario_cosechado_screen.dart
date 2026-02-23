@@ -39,7 +39,7 @@ class InventarioCosechadoScreen extends ConsumerWidget {
       backgroundColor: const Color(0xFFF9FAFB),
       appBar: AppBar(
         title: const Text(
-          'Inventario Cosechado',
+          'Cosechado',
           style: TextStyle(
             fontWeight: FontWeight.bold,
             color: AppColors.textPrimary,
