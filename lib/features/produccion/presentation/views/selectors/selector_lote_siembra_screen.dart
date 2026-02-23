@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../../app/di/providers.dart';
@@ -8,11 +9,128 @@ import '../../../domain/entities/lote.dart';
 import '../../../domain/entities/produccion_enums.dart';
 import '../ciclo_form_screen.dart';
 import 'selector_filter_modal.dart';
-import '../../../domain/repositories/produccion_repository.dart';
+
+// --- PROVEEDORES DE ESTADO LOCAL (BÚSQUEDA Y FILTROS) ---
+final slsSearchQueryProvider = StateProvider.autoDispose<String>((ref) => '');
+final slsVariedadProvider = StateProvider.autoDispose<String?>((ref) => null);
+final slsFincaProvider = StateProvider.autoDispose<String?>((ref) => null);
+final slsSortAscendingProvider = StateProvider.autoDispose<bool>(
+  (ref) => false,
+);
+
+// --- PROVEEDOR DE DATOS COMBINADOS ---
+class _SelectorData {
+  final List<Lote> lotesLibres;
+  final List<String> variedades;
+  final List<String> nombresFincas;
+  final Map<String, Finca> fincasMap;
+
+  _SelectorData({
+    required this.lotesLibres,
+    required this.variedades,
+    required this.nombresFincas,
+    required this.fincasMap,
+  });
+}
+
+final slsDataProvider = Provider.autoDispose
+    .family<AsyncValue<_SelectorData>, String>((ref, productoraId) {
+      final fincasAsync = ref.watch(fincasStreamProviderFamily(productoraId));
+      final lotesAsync = ref.watch(lotesStreamProviderFamily(productoraId));
+      final ciclosAsync = ref.watch(
+        ciclosActivosStreamProviderFamily(productoraId),
+      );
+
+      if (fincasAsync.isLoading ||
+          lotesAsync.isLoading ||
+          ciclosAsync.isLoading) {
+        return const AsyncValue.loading();
+      }
+      if (fincasAsync.hasError)
+        return AsyncValue.error(fincasAsync.error!, fincasAsync.stackTrace!);
+      if (lotesAsync.hasError)
+        return AsyncValue.error(lotesAsync.error!, lotesAsync.stackTrace!);
+      if (ciclosAsync.hasError)
+        return AsyncValue.error(ciclosAsync.error!, ciclosAsync.stackTrace!);
+
+      final fincas = fincasAsync.value ?? <Finca>[];
+      final lotes = lotesAsync.value ?? <Lote>[];
+      final ciclos = ciclosAsync.value ?? <CicloProduccion>[];
+
+      final ocupados = ciclos.map((c) => c.idLote).toSet();
+      final libres = lotes.where((l) => !ocupados.contains(l.id)).toList();
+
+      final variedades =
+          libres
+              .map((l) => l.variedad)
+              .where((v) => v.isNotEmpty)
+              .toSet()
+              .toList()
+            ..sort();
+      final nombresFincas = fincas.map((f) => f.nombre).toSet().toList()
+        ..sort();
+      final fincasMap = {for (var f in fincas) f.id: f};
+
+      return AsyncValue.data(
+        _SelectorData(
+          lotesLibres: libres,
+          variedades: variedades,
+          nombresFincas: nombresFincas,
+          fincasMap: fincasMap,
+        ),
+      );
+    });
+
+// --- PROVEEDOR DE IDS FILTRADOS ---
+final slsFilteredLoteIdsProvider = Provider.autoDispose
+    .family<AsyncValue<List<String>>, String>((ref, productoraId) {
+      final dataAsync = ref.watch(slsDataProvider(productoraId));
+      if (!dataAsync.hasValue) return const AsyncValue.loading();
+      if (dataAsync.hasError)
+        return AsyncValue.error(dataAsync.error!, dataAsync.stackTrace!);
+
+      final data = dataAsync.value!;
+      final searchQuery = ref.watch(slsSearchQueryProvider);
+      final variedad = ref.watch(slsVariedadProvider);
+      final finca = ref.watch(slsFincaProvider);
+      final sortAsc = ref.watch(slsSortAscendingProvider);
+
+      var lotes = data.lotesLibres;
+
+      if (searchQuery.isNotEmpty) {
+        lotes = lotes
+            .where((l) => l.nombre.toLowerCase().contains(searchQuery))
+            .toList();
+      }
+      if (variedad != null) {
+        lotes = lotes.where((l) => l.variedad == variedad).toList();
+      }
+      if (finca != null) {
+        final f = data.fincasMap.values.firstWhere(
+          (fin) => fin.nombre == finca,
+          orElse: () => Finca(
+            id: '',
+            nombre: '',
+            productoraId: '',
+            ubicacion: '',
+            areaTotal: 0,
+          ),
+        );
+        if (f.id.isNotEmpty)
+          lotes = lotes.where((l) => l.fincaId == f.id).toList();
+      }
+
+      lotes.sort(
+        (a, b) => sortAsc
+            ? a.nombre.compareTo(b.nombre)
+            : b.nombre.compareTo(a.nombre),
+      );
+
+      return AsyncValue.data(lotes.map((l) => l.id).toList());
+    });
 
 class SelectorLoteSiembraScreen extends ConsumerStatefulWidget {
   final String productoraId;
-
   const SelectorLoteSiembraScreen({super.key, required this.productoraId});
 
   @override
@@ -22,22 +140,21 @@ class SelectorLoteSiembraScreen extends ConsumerStatefulWidget {
 
 class _SelectorLoteSiembraScreenState
     extends ConsumerState<SelectorLoteSiembraScreen> {
-  // Estado local de filtros
-  bool _sortAscending =
-      false; // true: A-Z, false: Z-A (por nombre lote por defecto)
-  DateTime?
-  _startDate; // No aplica mucho para lotes libres, pero lo dejamos por si acaso (ej. fecha creación?)
-  DateTime? _endDate;
-  String? _variedad;
-  String? _finca;
-  String? _searchQuery;
-
+  Timer? _debounce;
   final TextEditingController _searchController = TextEditingController();
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _onSearchChanged(String val) {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      ref.read(slsSearchQueryProvider.notifier).state = val.toLowerCase();
+    });
   }
 
   void _openFilters(List<String> variedades, List<String> fincas) {
@@ -49,11 +166,11 @@ class _SelectorLoteSiembraScreenState
         variedades: variedades,
         cintas: const [], // Lotes libre no tienen cinta
         fincas: fincas,
-        sortAscending: _sortAscending,
-        startDate: _startDate,
-        endDate: _endDate,
-        variedad: _variedad,
-        finca: _finca,
+        sortAscending: ref.read(slsSortAscendingProvider),
+        startDate: null,
+        endDate: null,
+        variedad: ref.read(slsVariedadProvider),
+        finca: ref.read(slsFincaProvider),
         onApply:
             ({
               required sortAscending,
@@ -63,13 +180,9 @@ class _SelectorLoteSiembraScreenState
               cinta,
               finca,
             }) {
-              setState(() {
-                _sortAscending = sortAscending;
-                _startDate = startDate;
-                _endDate = endDate;
-                _variedad = variedad;
-                _finca = finca;
-              });
+              ref.read(slsSortAscendingProvider.notifier).state = sortAscending;
+              ref.read(slsVariedadProvider.notifier).state = variedad;
+              ref.read(slsFincaProvider.notifier).state = finca;
             },
       ),
     );
@@ -77,17 +190,14 @@ class _SelectorLoteSiembraScreenState
 
   @override
   Widget build(BuildContext context) {
-    // 1. Obtener datos con Riverpod (Family Providers donde sea posible o Repository directo)
-    final repo = ref.watch(produccionRepositoryProvider);
+    final filteredIdsAsync = ref.watch(
+      slsFilteredLoteIdsProvider(widget.productoraId),
+    );
+    final dataAsync = ref.watch(slsDataProvider(widget.productoraId));
 
-    // Usamos StreamProviders si existen (para caching) o repo directo.
-    // Como creamos providers family, usémoslos para consistencia y caching.
-    // Pero fincasStreamProvider NO es family aún? Ah, el usuario no lo pidió explicitamente pero
-    // podemos usar repo.watchFincas directamente manejado com AsyncValue aqui.
-
-    // (fincasAsync removed as it was unused and duplicated)
-
-    final mainDataAsync = _combineStreams(repo);
+    final searchQuery = ref.watch(slsSearchQueryProvider);
+    final variedad = ref.watch(slsVariedadProvider);
+    final finca = ref.watch(slsFincaProvider);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -97,69 +207,35 @@ class _SelectorLoteSiembraScreenState
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         actions: [
-          // Botón Filtros siempre visible (si hay datos cargados logicamente)
           IconButton(
             icon: Icon(
-              (_variedad != null || _finca != null)
+              (variedad != null || finca != null)
                   ? Icons.filter_list_alt
                   : Icons.filter_list,
-              color: (_variedad != null || _finca != null)
+              color: (variedad != null || finca != null)
                   ? AppColors.accent
                   : AppColors.textPrimary,
             ),
             onPressed: () {
-              // Necesitamos los datos para abrir el modal.
-              // Si aun cargando, tal vez no hacer nada o mostrar toast.
-              mainDataAsync.whenData((data) {
-                _openFilters(data.variedades, data.nombresFincas);
-              });
+              dataAsync.whenData(
+                (data) => _openFilters(data.variedades, data.nombresFincas),
+              );
             },
           ),
-          if (_searchQuery != null && _searchQuery!.isNotEmpty)
+          if (searchQuery.isNotEmpty)
             IconButton(
               icon: const Icon(Icons.search_off),
               onPressed: () {
-                setState(() {
-                  _searchQuery = null;
-                  _searchController.clear();
-                });
+                _searchController.clear();
+                ref.read(slsSearchQueryProvider.notifier).state = '';
               },
             ),
         ],
       ),
-      body: mainDataAsync.when(
-        data: (data) {
-          var lotes = data.lotesLibres;
-
-          // Filtrado en memoria
-          if (_searchQuery != null && _searchQuery!.isNotEmpty) {
-            lotes = lotes
-                .where((l) => l.nombre.toLowerCase().contains(_searchQuery!))
-                .toList();
-          }
-          if (_variedad != null) {
-            lotes = lotes.where((l) => l.variedad == _variedad).toList();
-          }
-          if (_finca != null) {
-            final fincaId = data.fincasMap.values
-                .firstWhere(
-                  (f) => f.nombre == _finca,
-                  orElse: () => Finca(
-                    id: '',
-                    nombre: '',
-                    productoraId: '',
-                    ubicacion: '',
-                    areaTotal: 0,
-                  ),
-                )
-                .id;
-            if (fincaId.isNotEmpty)
-              lotes = lotes.where((l) => l.fincaId == fincaId).toList();
-          }
-
-          lotes.sort((a, b) => a.nombre.compareTo(b.nombre));
-
-          if (lotes.isEmpty) return _buildEmptyState();
+      body: filteredIdsAsync.when(
+        data: (loteIds) {
+          if (loteIds.isEmpty)
+            return _buildEmptyState(variedad, finca, searchQuery);
 
           return Column(
             children: [
@@ -177,8 +253,7 @@ class _SelectorLoteSiembraScreenState
                     filled: true,
                     fillColor: Colors.grey.shade50,
                   ),
-                  onChanged: (val) =>
-                      setState(() => _searchQuery = val.toLowerCase()),
+                  onChanged: _onSearchChanged, // <-- Debouncer optimizado
                 ),
               ),
               Padding(
@@ -189,7 +264,7 @@ class _SelectorLoteSiembraScreenState
                 child: Row(
                   children: [
                     Text(
-                      '${lotes.length} lotes disponibles',
+                      '${loteIds.length} lotes disponibles',
                       style: TextStyle(
                         color: Colors.grey.shade600,
                         fontWeight: FontWeight.bold,
@@ -201,45 +276,14 @@ class _SelectorLoteSiembraScreenState
               Expanded(
                 child: ListView.separated(
                   padding: const EdgeInsets.all(16),
-                  itemCount: lotes.length,
+                  itemCount: loteIds.length,
                   separatorBuilder: (_, __) => const Divider(height: 1),
                   itemBuilder: (context, index) {
-                    final lote = lotes[index];
-                    final finca = data.fincasMap[lote.fincaId];
-                    return InkWell(
-                      onTap: () {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => CicloFormScreen(
-                              productoraId: widget.productoraId,
-                              idLote: lote.id,
-                              nombreLote: lote.nombre,
-                              areaLote: lote.area,
-                              variedadLote: lote.variedad,
-                              siguientePaso: TipoEvento.siembra,
-                            ),
-                          ),
-                        );
-                      },
-                      child: ListTile(
-                        leading: const CircleAvatar(
-                          backgroundColor: AppColors.surfaceVariant,
-                          child: Icon(
-                            Icons.grid_on_rounded,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                        title: Text(
-                          lote.nombre,
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        subtitle: Text(
-                          '${finca?.nombre ?? ''} • ${lote.area} mz • ${lote.variedad}',
-                        ),
-                        trailing: const Icon(Icons.chevron_right_rounded),
-                      ),
-                    );
+                    return _LoteCard(
+                      productoraId: widget.productoraId,
+                      loteId: loteIds[index],
+                      key: ValueKey(loteIds[index]),
+                    ); // <-- Card Inteligente
                   },
                 ),
               ),
@@ -252,55 +296,7 @@ class _SelectorLoteSiembraScreenState
     );
   }
 
-  // Helper para combinar streams
-  AsyncValue<_SelectorData> _combineStreams(ProduccionRepository repo) {
-    final fincasAsync = ref.watch(
-      fincasStreamProviderFamily(widget.productoraId),
-    );
-    final lotesAsync = ref.watch(
-      lotesStreamProviderFamily(widget.productoraId),
-    );
-    final ciclosAsync = ref.watch(
-      ciclosActivosStreamProviderFamily(widget.productoraId),
-    );
-
-    if (fincasAsync.isLoading || lotesAsync.isLoading || ciclosAsync.isLoading)
-      return const AsyncValue.loading();
-    if (fincasAsync.hasError)
-      return AsyncValue.error(fincasAsync.error!, fincasAsync.stackTrace!);
-    if (lotesAsync.hasError)
-      return AsyncValue.error(lotesAsync.error!, lotesAsync.stackTrace!);
-    if (ciclosAsync.hasError)
-      return AsyncValue.error(ciclosAsync.error!, ciclosAsync.stackTrace!);
-
-    final fincas = fincasAsync.value ?? <Finca>[];
-    final lotes = lotesAsync.value ?? <Lote>[];
-    final ciclos = ciclosAsync.value ?? <CicloProduccion>[];
-
-    final ocupados = ciclos.map((c) => c.idLote).toSet();
-    final libres = lotes.where((l) => !ocupados.contains(l.id)).toList();
-
-    final variedades =
-        libres
-            .map((l) => l.variedad)
-            .where((v) => v.isNotEmpty)
-            .toSet()
-            .toList()
-          ..sort();
-    final nombresFincas = fincas.map((f) => f.nombre).toSet().toList()..sort();
-    final fincasMap = {for (var f in fincas) f.id: f};
-
-    return AsyncValue.data(
-      _SelectorData(
-        lotesLibres: libres,
-        variedades: variedades,
-        nombresFincas: nombresFincas,
-        fincasMap: fincasMap,
-      ),
-    );
-  }
-
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(String? variedad, String? finca, String searchQuery) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -311,17 +307,13 @@ class _SelectorLoteSiembraScreenState
             'No se encontraron lotes',
             style: TextStyle(color: Colors.grey),
           ),
-          if (_variedad != null || _finca != null || _searchQuery != null)
+          if (variedad != null || finca != null || searchQuery.isNotEmpty)
             TextButton(
               onPressed: () {
-                if (mounted) {
-                  setState(() {
-                    _variedad = null;
-                    _finca = null;
-                    _searchQuery = null;
-                    _searchController.clear();
-                  });
-                }
+                _searchController.clear();
+                ref.read(slsVariedadProvider.notifier).state = null;
+                ref.read(slsFincaProvider.notifier).state = null;
+                ref.read(slsSearchQueryProvider.notifier).state = '';
               },
               child: const Text('Limpiar filtros'),
             ),
@@ -331,16 +323,66 @@ class _SelectorLoteSiembraScreenState
   }
 }
 
-class _SelectorData {
-  final List<Lote> lotesLibres;
-  final List<String> variedades;
-  final List<String> nombresFincas;
-  final Map<String, Finca> fincasMap;
+/// Tarjeta inteligente que utiliza ref.select para evitar redibujos cuando otros lotes cambian.
+class _LoteCard extends ConsumerWidget {
+  final String productoraId;
+  final String loteId;
 
-  _SelectorData({
-    required this.lotesLibres,
-    required this.variedades,
-    required this.nombresFincas,
-    required this.fincasMap,
+  const _LoteCard({
+    required this.productoraId,
+    required this.loteId,
+    super.key,
   });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final loteModel = ref.watch(
+      slsDataProvider(productoraId).select((dataAsync) {
+        return dataAsync.valueOrNull?.lotesLibres.firstWhere(
+          (l) => l.id == loteId,
+        );
+      }),
+    );
+
+    if (loteModel == null) return const SizedBox.shrink();
+
+    final fincaNombre = ref.watch(
+      slsDataProvider(productoraId).select((dataAsync) {
+        return dataAsync.valueOrNull?.fincasMap[loteModel.fincaId]?.nombre ??
+            '';
+      }),
+    );
+
+    return InkWell(
+      onTap: () {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => CicloFormScreen(
+              productoraId: productoraId,
+              idLote: loteModel.id,
+              nombreLote: loteModel.nombre,
+              areaLote: loteModel.area,
+              variedadLote: loteModel.variedad,
+              siguientePaso: TipoEvento.siembra,
+            ),
+          ),
+        );
+      },
+      child: ListTile(
+        leading: const CircleAvatar(
+          backgroundColor: AppColors.surfaceVariant,
+          child: Icon(Icons.grid_on_rounded, color: AppColors.textSecondary),
+        ),
+        title: Text(
+          loteModel.nombre,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        subtitle: Text(
+          '$fincaNombre • ${loteModel.area} mz • ${loteModel.variedad}',
+        ),
+        trailing: const Icon(Icons.chevron_right_rounded),
+      ),
+    );
+  }
 }

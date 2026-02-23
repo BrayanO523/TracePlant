@@ -11,7 +11,7 @@ class CosechasPendientesScreen extends ConsumerWidget {
 
   const CosechasPendientesScreen({super.key, required this.productoraId});
 
-  void _showCicloTimeline(BuildContext context, dynamic ciclo) {
+  void _showCicloTimeline(BuildContext context, CicloProduccion ciclo) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -33,7 +33,20 @@ class CosechasPendientesScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(consultasProvider(productoraId));
+    // 1. Escuchar solo información agregada y la lista de IDs (usando select)
+    final totalPendientes = ref.watch(
+      consultasProvider(
+        productoraId,
+      ).select((s) => s.cosechasPendientes.length),
+    );
+    final totalUnidades = ref.watch(
+      consultasProvider(productoraId).select((s) => s.totalCosechasPendientes),
+    );
+    final idsPendientes = ref.watch(
+      consultasProvider(
+        productoraId,
+      ).select((s) => s.cosechasPendientes.map((c) => c.id).toList()),
+    );
 
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
@@ -84,7 +97,7 @@ class CosechasPendientesScreen extends ConsumerWidget {
                         ),
                       ),
                       Text(
-                        '${state.cosechasPendientes.length} lotes \u00b7 ${state.totalCosechasPendientes.toStringAsFixed(0)} unidades',
+                        '$totalPendientes lotes \u00b7 ${totalUnidades.toStringAsFixed(0)} unidades',
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.grey.shade500,
@@ -100,7 +113,7 @@ class CosechasPendientesScreen extends ConsumerWidget {
 
           // Lista
           Expanded(
-            child: state.cosechasPendientes.isEmpty
+            child: idsPendientes.isEmpty
                 ? Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
@@ -124,14 +137,14 @@ class CosechasPendientesScreen extends ConsumerWidget {
                   )
                 : ListView.separated(
                     padding: const EdgeInsets.all(16),
-                    itemCount: state.cosechasPendientes.length,
+                    itemCount: idsPendientes.length,
                     separatorBuilder: (_, __) => const SizedBox(height: 12),
                     itemBuilder: (context, index) {
-                      final ciclo = state.cosechasPendientes[index];
+                      final idCiclo = idsPendientes[index];
                       return CosechaPendienteCard(
-                        ciclo: ciclo,
+                        idCiclo: idCiclo,
                         productoraId: productoraId,
-                        onTap: () => _showCicloTimeline(context, ciclo),
+                        onShowTimeline: _showCicloTimeline,
                       );
                     },
                   ),
@@ -142,29 +155,36 @@ class CosechasPendientesScreen extends ConsumerWidget {
   }
 }
 
-/// Card de cosecha pendiente con botón de entrega.
+/// Card de cosecha pendiente aislada leyendo su estado con select
 class CosechaPendienteCard extends ConsumerWidget {
-  final CicloProduccion ciclo;
+  final String idCiclo;
   final String productoraId;
-  final VoidCallback onTap;
+  final void Function(BuildContext, CicloProduccion) onShowTimeline;
 
   const CosechaPendienteCard({
     super.key,
-    required this.ciclo,
+    required this.idCiclo,
     required this.productoraId,
-    required this.onTap,
+    required this.onShowTimeline,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final dateStr = ciclo.fechaCosecha != null
-        ? '${ciclo.fechaCosecha!.day}/${ciclo.fechaCosecha!.month}/${ciclo.fechaCosecha!.year}'
+    // 2. Select Inteligente: El widget individual solo se redibuja si ESTE ciclo experimenta algún cambio
+    final cicloModel = ref.watch(
+      consultasProvider(productoraId).select((state) {
+        return state.cosechasPendientes.firstWhere((c) => c.id == idCiclo);
+      }),
+    );
+
+    final dateStr = cicloModel.fechaCosecha != null
+        ? '${cicloModel.fechaCosecha!.day}/${cicloModel.fechaCosecha!.month}/${cicloModel.fechaCosecha!.year}'
         : 'Sin fecha';
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: onTap,
+        onTap: () => onShowTimeline(context, cicloModel),
         borderRadius: BorderRadius.circular(16),
         child: Container(
           padding: const EdgeInsets.all(16),
@@ -200,7 +220,7 @@ class CosechaPendienteCard extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          ciclo.nombreLote,
+                          cicloModel.nombreLote,
                           style: const TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
@@ -208,7 +228,7 @@ class CosechaPendienteCard extends ConsumerWidget {
                           ),
                         ),
                         Text(
-                          '${ciclo.variedad} \u00b7 ${DateTime.now().difference(ciclo.fechaSiembra).inDays} d\u00edas',
+                          '${cicloModel.variedad} \u00b7 ${DateTime.now().difference(cicloModel.fechaSiembra).inDays} d\u00edas',
                           style: TextStyle(
                             fontSize: 13,
                             color: Colors.grey.shade500,
@@ -222,7 +242,7 @@ class CosechaPendienteCard extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        ciclo.cantidadCosecha?.toStringAsFixed(0) ?? "0",
+                        cicloModel.cantidadCosecha?.toStringAsFixed(0) ?? "0",
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -251,7 +271,7 @@ class CosechaPendienteCard extends ConsumerWidget {
                       builder: (ctx) => AlertDialog(
                         title: const Text('Confirmar Entrega'),
                         content: Text(
-                          '\u00bfMarcar ${ciclo.nombreLote} como entregado a empacadora?\n\nCantidad: ${ciclo.cantidadCosecha?.toStringAsFixed(0) ?? "0"}',
+                          '\u00bfMarcar ${cicloModel.nombreLote} como entregado a empacadora?\n\nCantidad: ${cicloModel.cantidadCosecha?.toStringAsFixed(0) ?? "0"}',
                         ),
                         actions: [
                           TextButton(
@@ -272,7 +292,7 @@ class CosechaPendienteCard extends ConsumerWidget {
                         produccionNotifierProvider(productoraId).notifier,
                       );
                       final ok = await notifier.registrarEntrega(
-                        idCiclo: ciclo.id,
+                        idCiclo: cicloModel.id,
                         uidUsuario: uid,
                       );
                       if (ok && context.mounted) {
