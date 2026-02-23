@@ -6,6 +6,8 @@ import 'produccion_fincas_screen.dart';
 import '../consultas/views/consultas_screen.dart';
 import '../consultas/views/inventario_cosechado_screen.dart';
 import '../consultas/views/proyeccion_cosecha_screen.dart';
+import '../../domain/entities/tipo_accion_produccion.dart';
+import 'tareas/accion_produccion_screen.dart';
 
 class ProduccionDashboardScreen extends ConsumerStatefulWidget {
   final String productoraId;
@@ -97,9 +99,9 @@ class _ProduccionDashboardScreenState
             ),
           ),
 
-          // ── BOTÓN INFERIOR (Action Area) ──
+          // ── BOTONES DE ACCIÓN (Task-Centric) ──
           Container(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: const BorderRadius.vertical(
@@ -114,42 +116,137 @@ class _ProduccionDashboardScreenState
               ],
             ),
             child: SafeArea(
-              child: SizedBox(
-                width: double.infinity,
-                height: 60,
-                child: ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
+              top: false,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      // Determinar tamaño de tarjeta según pantalla (teléfono vs tablet)
+                      double cardWidth = (constraints.maxWidth - 24) / 3;
+                      if (cardWidth < 100) {
+                        cardWidth = constraints
+                            .maxWidth; // Si es muy pequeño, ocupa todo
+                      }
+
+                      return Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        alignment: WrapAlignment.center,
+                        children: [
+                          _buildTaskBtn(
+                            context,
+                            'Siembra',
+                            Icons.grass_rounded,
+                            AppColors.success,
+                            TipoAccionProduccion.siembra,
+                            width: cardWidth,
+                          ),
+                          _buildTaskBtn(
+                            context,
+                            'Encintado',
+                            Icons.loyalty_rounded,
+                            AppColors.warning,
+                            TipoAccionProduccion.encintado,
+                            width: cardWidth,
+                          ),
+                          _buildTaskBtn(
+                            context,
+                            'Cosecha',
+                            Icons.content_cut_rounded,
+                            AppColors.error,
+                            TipoAccionProduccion.cosecha,
+                            width: cardWidth,
+                          ),
+                        ],
+                      );
+                    },
                   ),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => ProduccionFincasScreen(
-                          productoraId: widget.productoraId,
-                          readOnly: widget.readOnly,
-                        ),
+                  const SizedBox(height: 16),
+
+                  // Botón Administrativo Segundario
+                  SizedBox(
+                    width: double.infinity,
+                    child: TextButton.icon(
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.grey.shade700,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
-                    );
-                  },
-                  icon: const Icon(Icons.terrain_rounded, size: 28),
-                  label: Text(
-                    widget.readOnly ? 'VER FINCAS' : 'MIS FINCAS',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ProduccionFincasScreen(
+                              productoraId: widget.productoraId,
+                              readOnly: widget.readOnly,
+                            ),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.map_rounded),
+                      label: const Text(
+                        'Explorador GIS de Fincas y Lotes Totales',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
                     ),
                   ),
-                ),
+                ],
               ),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildTaskBtn(
+    BuildContext context,
+    String title,
+    IconData icon,
+    Color color,
+    TipoAccionProduccion accion, {
+    required double width,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => AccionProduccionScreen(
+                productoraId: widget.productoraId,
+                accion: accion,
+              ),
+            ),
+          );
+        },
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          width: width,
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: color.withValues(alpha: 0.3), width: 1.5),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: color, size: 32),
+              const SizedBox(height: 8),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: color.withOpacity(0.9),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

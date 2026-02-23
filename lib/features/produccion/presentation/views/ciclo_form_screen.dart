@@ -6,6 +6,7 @@ import '../viewmodels/produccion_notifier.dart';
 import '../../domain/entities/ciclo_produccion.dart';
 import '../../domain/entities/produccion_enums.dart';
 
+import 'package:intl/intl.dart';
 import '../../../administracion/domain/entities/cinta.dart';
 import 'lote_history_screen.dart';
 import '../../../administracion/presentation/screens/cintas_screen.dart';
@@ -43,6 +44,7 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
   Cinta? _cintaSeleccionada;
   final _cantidadEncintadoController = TextEditingController();
   DateTime _fechaSeleccionada = DateTime.now();
+  String? _encintadoSeleccionadoId;
   bool _cosechaPreFilled = false; // Para pre-llenar solo una vez
 
   // Estado local para mostrar formulario de agregar encintado
@@ -210,8 +212,7 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
   Widget _buildLoteHeader(ThemeData theme, CicloProduccion? ciclo) {
     String diasTexto = '';
     if (ciclo != null) {
-      final days = DateTime.now().difference(ciclo.fechaSiembra).inDays;
-      diasTexto = 'Día $days del ciclo';
+      diasTexto = 'Siembra hace ${_tiempoTranscurrido(ciclo.fechaSiembra)}';
     }
 
     return Container(
@@ -375,6 +376,13 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
     ThemeData theme,
     bool isLoading,
   ) {
+    final perms = ref
+        .watch(currentUserStreamProvider)
+        .value
+        ?.effectivePermissions;
+    final canCrearEncintado = perms?.encintado.crear ?? false;
+    final canCrearCosecha = perms?.cosecha.crear ?? false;
+
     switch (paso) {
       case TipoEvento.siembra:
         return [
@@ -392,7 +400,8 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
           _buildEncintadoHistory(theme, ciclo),
           const SizedBox(height: 20),
 
-          if (_showEncintadoForm || (ciclo?.encintados.isEmpty ?? true))
+          if (canCrearEncintado &&
+              (_showEncintadoForm || (ciclo?.encintados.isEmpty ?? true)))
             Column(
               children: [
                 _buildCardSection(
@@ -430,23 +439,38 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
           else
             Column(
               children: [
-                SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: OutlinedButton.icon(
-                    onPressed: () => setState(() => _showEncintadoForm = true),
-                    icon: const Icon(Icons.add),
-                    label: const Text('Agregar Nuevo Encintado'),
-                    style: OutlinedButton.styleFrom(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
+                if (canCrearEncintado) ...[
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: OutlinedButton.icon(
+                      onPressed: () =>
+                          setState(() => _showEncintadoForm = true),
+                      icon: const Icon(Icons.add),
+                      label: const Text('Agregar Nuevo Encintado'),
+                      style: OutlinedButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        side: const BorderSide(color: AppColors.primary),
                       ),
-                      side: const BorderSide(color: AppColors.primary),
                     ),
                   ),
-                ),
-                const SizedBox(height: 20),
-                _buildActionToCosecha(theme, ciclo),
+                  const SizedBox(height: 20),
+                ],
+                if (canCrearCosecha && (ciclo?.encintados.isNotEmpty ?? false))
+                  Builder(
+                    builder: (context) {
+                      bool hasAvailable = true;
+                      if (ciclo?.esCultivoContinuo == true) {
+                        hasAvailable = ciclo!.encintados.any(
+                          (e) => e.disponible > 0,
+                        );
+                      }
+                      if (!hasAvailable) return const SizedBox.shrink();
+                      return _buildActionToCosecha(theme, ciclo);
+                    },
+                  ),
               ],
             ),
         ];
@@ -591,6 +615,38 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
         ),
       );
     }
+
+    // Filtrar para ocultar los que ya no tienen saldo (solo en ciclo continuo)
+    final activeEncintados = ciclo.esCultivoContinuo
+        ? ciclo.encintados.where((e) => e.disponible > 0).toList()
+        : ciclo.encintados;
+
+    if (activeEncintados.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(20),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: Column(
+          children: [
+            Icon(
+              Icons.check_circle_outline,
+              color: AppColors.estadoCosechado.withValues(alpha: 0.5),
+              size: 48,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Todo el inventario ha sido cosechado',
+              style: TextStyle(color: Colors.grey.shade600),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Card(
       elevation: 0,
       color: Colors.white,
@@ -601,20 +657,20 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Historial de Encintados',
+              'Inventario de Encintados (Pendiente)',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
             const SizedBox(height: 16),
             ListView.separated(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              itemCount: ciclo.encintados.length,
+              itemCount: activeEncintados.length,
               separatorBuilder: (_, __) => const Padding(
                 padding: EdgeInsets.symmetric(vertical: 8.0),
                 child: Divider(height: 1),
               ),
               itemBuilder: (context, index) {
-                final item = ciclo.encintados[index];
+                final item = activeEncintados[index];
                 return Row(
                   children: [
                     Container(
@@ -632,15 +688,40 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '${item.cintaNombre} · ${item.cantidad} uds',
+                            '${item.cintaNombre} · Disp: ${item.disponible.toStringAsFixed(0)} uds',
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
-                          Text(
-                            _formatDateDisplay(item.fecha),
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey,
-                            ),
+                          Row(
+                            children: [
+                              Text(
+                                _formatDateDisplay(item.fecha),
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary.withValues(
+                                    alpha: 0.1,
+                                  ),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  _tiempoTranscurrido(item.fecha),
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -701,62 +782,124 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
             if (cintas.isEmpty) {
               return const Text('No hay colores configurados');
             }
-            return Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: cintas.map((cinta) {
-                final isSelected = _cintaSeleccionada?.id == cinta.id;
-                return GestureDetector(
-                  onTap: () => setState(() => _cintaSeleccionada = cinta),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 10,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? AppColors.primary.withValues(alpha: 0.1)
-                          : Colors.grey.shade50,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: isSelected
-                            ? AppColors.primary
-                            : Colors.grey.shade300,
-                        width: isSelected ? 2 : 1,
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 14,
-                          height: 14,
-                          decoration: BoxDecoration(
-                            color: _parseColor(cinta.colorHex),
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.black12),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          cinta.color,
-                          style: TextStyle(
-                            fontWeight: isSelected
-                                ? FontWeight.bold
-                                : FontWeight.normal,
-                            color: isSelected
-                                ? AppColors.primary
-                                : Colors.grey.shade700,
-                          ),
-                        ),
-                      ],
+
+            Widget autoSuggestionWidget = const SizedBox.shrink();
+
+            if (ciclo?.esCultivoContinuo == true) {
+              final dayOfYear = int.parse(
+                DateFormat('D').format(_fechaSeleccionada),
+              );
+              final weekOfYear =
+                  ((dayOfYear - _fechaSeleccionada.weekday + 10) / 7).floor();
+              final colorIndex = (weekOfYear - 1) % cintas.length;
+              final finalIndex = colorIndex < 0 ? 0 : colorIndex;
+              final cintaAsignada = cintas[finalIndex];
+
+              if (_cintaSeleccionada == null) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted && _cintaSeleccionada == null) {
+                    setState(() => _cintaSeleccionada = cintaAsignada);
+                  }
+                });
+              }
+
+              autoSuggestionWidget = Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppColors.primary.withValues(alpha: 0.3),
                     ),
                   ),
-                );
-              }).toList(),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.auto_awesome,
+                        color: AppColors.primary,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Sugerido (Semana $weekOfYear): ${cintaAsignada.color}',
+                          style: const TextStyle(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                autoSuggestionWidget,
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: cintas.map((cinta) {
+                    final isSelected = _cintaSeleccionada?.id == cinta.id;
+                    return GestureDetector(
+                      onTap: () => setState(() => _cintaSeleccionada = cinta),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? AppColors.primary.withValues(alpha: 0.1)
+                              : Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isSelected
+                                ? AppColors.primary
+                                : Colors.grey.shade300,
+                            width: isSelected ? 2 : 1,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 14,
+                              height: 14,
+                              decoration: BoxDecoration(
+                                color: _parseColor(cinta.colorHex),
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.black12),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              cinta.color,
+                              style: TextStyle(
+                                fontWeight: isSelected
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                                color: isSelected
+                                    ? AppColors.primary
+                                    : Colors.grey.shade700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ],
             );
           },
+
           loading: () => const CircularProgressIndicator(),
           error: (_, __) => const Text('Error'),
         ),
@@ -821,7 +964,120 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
   }
 
   Widget _buildCosechaFields(ThemeData theme, CicloProduccion? ciclo) {
-    final totalEncintado = ciclo?.totalEncintado ?? 0;
+    if (ciclo == null) return const SizedBox.shrink();
+    final totalEncintado = ciclo.totalEncintado;
+
+    if (ciclo.esCultivoContinuo) {
+      final opcionesDisponibles = ciclo.encintados
+          .where((e) => e.disponible > 0)
+          .toList();
+      if (opcionesDisponibles.isEmpty) {
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.orange.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: const Text(
+            'No hay inventario disponible para cosechar en ninguna cohorte.',
+            style: TextStyle(color: Colors.orange),
+          ),
+        );
+      }
+
+      final currentValue =
+          opcionesDisponibles.any((e) => e.id == _encintadoSeleccionadoId)
+          ? _encintadoSeleccionadoId
+          : null;
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Cohorte a Cosechar (Cinta)',
+            style: TextStyle(fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<String>(
+            value: currentValue,
+            hint: const Text('Seleccione inventario de cinta'),
+            decoration: InputDecoration(
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 12,
+              ),
+            ),
+            isExpanded: true,
+            items: opcionesDisponibles.map((e) {
+              return DropdownMenuItem(
+                value: e.id,
+                child: Row(
+                  children: [
+                    Container(
+                      width: 12,
+                      height: 12,
+                      decoration: BoxDecoration(
+                        color: _parseColor(e.cintaColorHex),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '${e.cintaNombre} - Disp: ${e.disponible.toStringAsFixed(0)}',
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+            onChanged: (val) {
+              setState(() {
+                _encintadoSeleccionadoId = val;
+                if (val != null) {
+                  final match = opcionesDisponibles.firstWhere(
+                    (e) => e.id == val,
+                  );
+                  _cantidadEncintadoController.text = match.disponible
+                      .toStringAsFixed(0);
+                }
+              });
+            },
+            validator: (v) => v == null ? 'Requerido' : null,
+          ),
+          const SizedBox(height: 24),
+          TextFormField(
+            controller: _cantidadEncintadoController,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: InputDecoration(
+              labelText: 'Cantidad Cosechada',
+              suffixText: 'uds',
+              prefixIcon: const Icon(Icons.agriculture),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            validator: (v) {
+              final parsed = double.tryParse(v ?? '') ?? 0;
+              if (parsed <= 0) return 'Cantidad inválida';
+              if (_encintadoSeleccionadoId != null) {
+                final limit = opcionesDisponibles
+                    .firstWhere((e) => e.id == _encintadoSeleccionadoId)
+                    .disponible;
+                if (parsed > limit) return 'Excede el disponible ($limit)';
+              }
+              return null;
+            },
+          ),
+        ],
+      );
+    }
+
+    // Lógica original para Maíz (Global)
     return Column(
       children: [
         Container(
@@ -984,8 +1240,19 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
         );
       case TipoEvento.cosecha:
         if (ciclo == null) return;
+        if (ciclo.esCultivoContinuo && _encintadoSeleccionadoId == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Debe seleccionar una cinta para cosechar'),
+            ),
+          );
+          return;
+        }
         await notifier.registrarCosecha(
           idCiclo: ciclo.id,
+          idEncintado: ciclo.esCultivoContinuo
+              ? _encintadoSeleccionadoId
+              : null,
           cantidad: double.parse(_cantidadEncintadoController.text),
           uidUsuario: uidUsuario,
         );
@@ -1001,6 +1268,17 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
     TipoEvento.entrega => 'Registrar Entrega',
     null => widget.nombreLote,
   };
+
+  String _tiempoTranscurrido(DateTime fecha) {
+    final difference = DateTime.now().difference(fecha);
+    final days = difference.inDays;
+    if (days < 0) return '0 días';
+    if (days < 7) return '$days días';
+    final weeks = days ~/ 7;
+    final remainingDays = days % 7;
+    if (remainingDays == 0) return '$weeks sem';
+    return '$weeks sem, $remainingDays d';
+  }
 
   String _formatDateDisplay(DateTime date) {
     const meses = [
