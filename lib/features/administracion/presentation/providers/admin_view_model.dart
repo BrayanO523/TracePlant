@@ -62,6 +62,7 @@ class AdminViewModel extends StateNotifier<AsyncValue<void>> {
     required String nombre,
     required String ubicacion,
     required double areaTotal,
+    List<Map<String, double>> coordenadas = const [],
   }) async {
     state = const AsyncValue.loading();
     try {
@@ -71,6 +72,7 @@ class AdminViewModel extends StateNotifier<AsyncValue<void>> {
         ubicacion: ubicacion,
         areaTotal: areaTotal,
         productoraId: _currentUserId,
+        coordenadas: coordenadas,
       );
       await ref.read(administracionRepositoryProvider).saveFinca(finca);
       state = const AsyncValue.data(null);
@@ -141,6 +143,7 @@ class AdminViewModel extends StateNotifier<AsyncValue<void>> {
         areaTotal: totalArea, // Updated Area
         productoraId: finca.productoraId,
         activo: finca.activo,
+        coordenadas: finca.coordenadas,
       );
       await ref.read(administracionRepositoryProvider).saveFinca(updatedFinca);
     }

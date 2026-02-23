@@ -70,12 +70,17 @@ class _LoteFormScreenState extends ConsumerState<LoteFormScreen> {
         )
         .toList();
 
+    final fincaCoords = (widget.finca.coordenadas)
+        .map((c) => LatLng(c['lat']!, c['lng']!))
+        .toList();
+
     final result = await Navigator.push<List<LatLng>>(
       context,
       MaterialPageRoute(
         builder: (_) => PolygonEditorScreen(
           initialPoints: _coordenadas,
           existingPolygons: neighbors,
+          parentPolygon: fincaCoords,
         ),
       ),
     );

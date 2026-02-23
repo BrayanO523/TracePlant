@@ -6,6 +6,10 @@ class Finca {
   final String productoraId;
   final bool activo;
 
+  /// Coordenadas GPS del polígono del terreno.
+  /// Cada elemento es un mapa con 'lat' y 'lng'.
+  final List<Map<String, double>> coordenadas;
+
   const Finca({
     required this.id,
     required this.nombre,
@@ -13,5 +17,9 @@ class Finca {
     required this.areaTotal,
     required this.productoraId,
     this.activo = true,
+    this.coordenadas = const [],
   });
+
+  /// true si la finca tiene polígono mapeado
+  bool get tieneMapa => coordenadas.length >= 3;
 }

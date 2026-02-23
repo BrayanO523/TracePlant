@@ -20,6 +20,7 @@ class MapaFincaScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final lotesAsync = ref.watch(allLotesStreamProvider);
+    final fincasAsync = ref.watch(fincasStreamProvider);
     final ciclosAsync = ref.watch(
       ciclosActivosStreamProviderFamily(productoraId),
     );
@@ -94,9 +95,15 @@ class MapaFincaScreen extends ConsumerWidget {
 
           // Obtener ciclos (puede ser loading aún)
           final ciclos = ciclosAsync.value ?? <CicloProduccion>[];
+          final fincas = fincasAsync.value ?? [];
+          final fincasMapeadas = fincas.where((f) => f.tieneMapa).toList();
 
           // Calcular centro del mapa basado en todos los polígonos
-          final allPoints = lotes.expand((l) => l.coordenadas).toList();
+          final allPoints = [
+            ...lotes.expand((l) => l.coordenadas),
+            ...fincasMapeadas.expand((f) => f.coordenadas),
+          ].toList();
+
           final centerLat =
               allPoints.map((p) => p['lat']!).reduce((a, b) => a + b) /
               allPoints.length;
@@ -118,7 +125,37 @@ class MapaFincaScreen extends ConsumerWidget {
                 userAgentPackageName: 'com.example.productoraempacadora',
               ),
 
-              // Polígonos coloreados
+              // Polígonos de Fincas (Contenedores)
+              if (fincasMapeadas.isNotEmpty)
+                PolygonLayer(
+                  polygons: fincasMapeadas.map((finca) {
+                    final points = finca.coordenadas
+                        .map((c) => LatLng(c['lat']!, c['lng']!))
+                        .toList();
+                    return Polygon(
+                      points: points,
+                      color: Colors.transparent, // Transparente adentro
+                      borderColor: Colors.green.shade800.withValues(
+                        alpha: 0.6,
+                      ), // Borde grueso
+                      borderStrokeWidth: 4,
+                      label: finca.nombre,
+                      labelStyle: TextStyle(
+                        color: Colors.green.shade900,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        shadows: [
+                          Shadow(
+                            color: Colors.white.withValues(alpha: 0.8),
+                            blurRadius: 4,
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ),
+
+              // Polígonos coloreados (Lotes)
               PolygonLayer(
                 polygons: lotes.map((lote) {
                   final color = _getPolygonColor(
@@ -131,9 +168,9 @@ class MapaFincaScreen extends ConsumerWidget {
                       .toList();
                   return Polygon(
                     points: points,
-                    color: color.withValues(alpha: 0.35),
+                    color: color.withValues(alpha: 0.45),
                     borderColor: color,
-                    borderStrokeWidth: 2.5,
+                    borderStrokeWidth: 2,
                     label: lote.nombre,
                     labelStyle: TextStyle(
                       color: Colors.white,

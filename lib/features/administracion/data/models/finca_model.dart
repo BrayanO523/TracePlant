@@ -9,10 +9,23 @@ class FincaModel extends Finca {
     required super.areaTotal,
     required super.productoraId,
     super.activo,
+    super.coordenadas,
   });
 
   factory FincaModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
+
+    // Parsear coordenadas
+    final List<Map<String, double>> coords = [];
+    if (data['coordenadas'] != null) {
+      for (var item in data['coordenadas']) {
+        coords.add({
+          'lat': (item['lat'] as num).toDouble(),
+          'lng': (item['lng'] as num).toDouble(),
+        });
+      }
+    }
+
     return FincaModel(
       id: doc.id,
       nombre: data['nombre'] ?? '',
@@ -20,6 +33,7 @@ class FincaModel extends Finca {
       areaTotal: (data['areaTotal'] ?? 0).toDouble(),
       productoraId: data['productoraId'] ?? '',
       activo: data['activo'] ?? true,
+      coordenadas: coords,
     );
   }
 
@@ -30,6 +44,7 @@ class FincaModel extends Finca {
       'areaTotal': areaTotal,
       'productoraId': productoraId,
       'activo': activo,
+      'coordenadas': coordenadas,
     };
   }
 }

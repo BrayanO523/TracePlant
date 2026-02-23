@@ -20,10 +20,14 @@ class PolygonEditorScreen extends StatefulWidget {
   /// Polígonos de lotes vecinos (solo referencia visual, no editables).
   final List<ExistingPolygon> existingPolygons;
 
+  /// Polígono contenedor (por ejemplo, los límites de la Finca al mapear un Lote).
+  final List<LatLng> parentPolygon;
+
   const PolygonEditorScreen({
     super.key,
     this.initialPoints = const [],
     this.existingPolygons = const [],
+    this.parentPolygon = const [],
   });
 
   @override
@@ -69,10 +73,11 @@ class _PolygonEditorScreenState extends State<PolygonEditorScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Todos los puntos disponibles (propios + vecinos) para calcular centro
+    // Todos los puntos disponibles (propios + vecinos + padre) para calcular centro
     final allAvailable = [
       ..._points,
       ...widget.existingPolygons.expand((p) => p.points),
+      ...widget.parentPolygon,
     ];
 
     final center = allAvailable.isNotEmpty
@@ -126,6 +131,21 @@ class _PolygonEditorScreenState extends State<PolygonEditorScreen> {
                 subdomains: const ['a', 'b', 'c', 'd'],
                 userAgentPackageName: 'com.example.productoraempacadora',
               ),
+
+              // Polígono Padre (ej: Finca contenedora)
+              if (widget.parentPolygon.length >= 3)
+                PolygonLayer(
+                  polygons: [
+                    Polygon(
+                      points: widget.parentPolygon,
+                      color: Colors.transparent, // Transparente adentro
+                      borderColor: Colors.green.shade800.withValues(
+                        alpha: 0.5,
+                      ), // Borde marcado
+                      borderStrokeWidth: 4,
+                    ),
+                  ],
+                ),
 
               // Polígonos de lotes vecinos (referencia, no editables)
               if (widget.existingPolygons.isNotEmpty)

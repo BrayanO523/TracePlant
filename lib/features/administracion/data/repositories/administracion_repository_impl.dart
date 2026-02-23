@@ -178,6 +178,7 @@ class AdministracionRepositoryImpl implements IAdministracionRepository {
       areaTotal: finca.areaTotal,
       productoraId: producerId,
       activo: finca.activo,
+      coordenadas: finca.coordenadas,
     );
     await docRef.set(model.toFirestore());
   }
