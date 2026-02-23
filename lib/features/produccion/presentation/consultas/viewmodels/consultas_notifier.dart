@@ -444,7 +444,7 @@ class ConsultasNotifier extends StateNotifier<ConsultasState> {
     );
   }
 
-  /// Calcula lotes cosechados pendientes de entrega a empacadora
+  /// Calcula lotes cosechados
   void _calculateCosechasPendientes() {
     final inv = state.ciclos
         .where((c) => c.estado == EstadoCiclo.cosechado)

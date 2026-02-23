@@ -21,7 +21,7 @@ class CicloProduccionModel extends CicloProduccion {
     super.mermaPorcentaje,
     super.uidRegistradoPor,
     super.idEmpacadora,
-    super.fechaEntrega,
+
     super.fechaCreacion,
     super.fechaActualizacion,
   });
@@ -77,7 +77,6 @@ class CicloProduccionModel extends CicloProduccion {
       merma: (data['merma'] as num?)?.toDouble(),
       mermaPorcentaje: (data['merma_porcentaje'] as num?)?.toDouble(),
       idEmpacadora: data['id_empacadora'] as String?,
-      fechaEntrega: (data['fecha_entrega'] as Timestamp?)?.toDate(),
       uidRegistradoPor: data['uid_registrado_por'] as String?,
       fechaCreacion: (data['fecha_creacion'] as Timestamp?)?.toDate(),
       fechaActualizacion: (data['fecha_actualizacion'] as Timestamp?)?.toDate(),
@@ -100,9 +99,7 @@ class CicloProduccionModel extends CicloProduccion {
       'merma': merma,
       'merma_porcentaje': mermaPorcentaje,
       'id_empacadora': idEmpacadora,
-      'fecha_entrega': fechaEntrega != null
-          ? Timestamp.fromDate(fechaEntrega!)
-          : null,
+
       'uid_registrado_por': uidRegistradoPor,
       'fecha_cosecha': fechaCosecha != null
           ? Timestamp.fromDate(fechaCosecha!)

@@ -201,7 +201,7 @@ class _ConsultasScreenState extends ConsumerState<ConsultasScreen> {
               const SizedBox(height: 12),
               _ToolOptionTile(
                 title: 'Cosechado',
-                subtitle: 'Lotes cosechados pendientes de entrega',
+                subtitle: 'Historial de Lotes cosechados',
                 icon: Icons.inventory_2_rounded,
                 color: Colors.orange,
                 onTap: () => Navigator.push(

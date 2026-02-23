@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../app/theme/app_colors.dart';
-import '../../../../../app/di/providers.dart';
+
 import '../../../domain/entities/ciclo_produccion.dart';
 import '../../widgets/ciclo_timeline.dart';
 import '../viewmodels/consultas_notifier.dart';
@@ -74,12 +74,12 @@ class CosechasPendientesScreen extends ConsumerWidget {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: AppColors.estadoEntregado.withValues(alpha: 0.1),
+                    color: AppColors.estadoCosechado.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Icon(
                     Icons.inventory_2_rounded,
-                    color: AppColors.estadoEntregado,
+                    color: AppColors.estadoCosechado,
                     size: 28,
                   ),
                 ),
@@ -89,7 +89,7 @@ class CosechasPendientesScreen extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'Pendiente de Entrega',
+                        'Lotes Cosechados',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -125,7 +125,7 @@ class CosechasPendientesScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          'Sin cosechas pendientes de entrega',
+                          'Sin cosechas registradas',
                           style: TextStyle(
                             color: Colors.grey.shade400,
                             fontSize: 16,
@@ -259,62 +259,6 @@ class CosechaPendienteCard extends ConsumerWidget {
                     ],
                   ),
                 ],
-              ),
-              const SizedBox(height: 12),
-              // Botón entregar
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: () async {
-                    final confirmed = await showDialog<bool>(
-                      context: context,
-                      builder: (ctx) => AlertDialog(
-                        title: const Text('Confirmar Entrega'),
-                        content: Text(
-                          '\u00bfMarcar ${cicloModel.nombreLote} como entregado a empacadora?\n\nCantidad: ${cicloModel.cantidadCosecha?.toStringAsFixed(0) ?? "0"}',
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(ctx, false),
-                            child: const Text('Cancelar'),
-                          ),
-                          FilledButton(
-                            onPressed: () => Navigator.pop(ctx, true),
-                            child: const Text('Entregar'),
-                          ),
-                        ],
-                      ),
-                    );
-                    if (confirmed == true && context.mounted) {
-                      final authState = ref.read(authStateStreamProvider);
-                      final uid = authState.asData?.value?.uid ?? 'unknown';
-                      final notifier = ref.read(
-                        produccionNotifierProvider(productoraId).notifier,
-                      );
-                      final ok = await notifier.registrarEntrega(
-                        idCiclo: cicloModel.id,
-                        uidUsuario: uid,
-                      );
-                      if (ok && context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Entrega registrada exitosamente'),
-                            backgroundColor: AppColors.estadoEntregado,
-                          ),
-                        );
-                      }
-                    }
-                  },
-                  icon: const Icon(Icons.local_shipping_rounded, size: 18),
-                  label: const Text('Marcar Entregado'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.estadoEntregado,
-                    side: const BorderSide(color: AppColors.estadoEntregado),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
               ),
             ],
           ),

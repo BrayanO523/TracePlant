@@ -71,9 +71,6 @@ class AppColors {
   /// Cosechado — verde
   static const Color estadoCosechado = Color(0xFF43A047);
 
-  /// Entregado — azul oscuro (despacho a empacadora)
-  static const Color estadoEntregado = Color(0xFF0277BD);
-
   /// Cancelado — rojo
   static const Color estadoCancelado = Color(0xFFE53935);
 

@@ -258,9 +258,6 @@ class _HistoryCard extends StatelessWidget {
     if (ciclo.estado.name == 'cosechado') {
       estadoColor = AppColors.estadoCosechado;
     }
-    if (ciclo.estado.name == 'entregado') {
-      estadoColor = AppColors.estadoEntregado;
-    }
     if (ciclo.estado.name == 'cancelado') {
       estadoColor = AppColors.estadoCancelado;
     }

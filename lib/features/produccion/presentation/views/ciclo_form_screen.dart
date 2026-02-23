@@ -509,9 +509,6 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
           const SizedBox(height: 24),
           _buildSubmitButton(paso, ciclo, isLoading),
         ];
-
-      case TipoEvento.entrega:
-        return [];
     }
   }
 
@@ -1013,11 +1010,6 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
         Icons.agriculture_rounded,
         AppColors.estadoCosechado,
       ),
-      TipoEvento.entrega => (
-        'Registrar Entrega',
-        Icons.local_shipping,
-        AppColors.estadoEntregado,
-      ),
     };
 
     return SizedBox(
@@ -1132,8 +1124,6 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
           cantidad: double.parse(_cantidadEncintadoController.text),
           uidUsuario: uidUsuario,
         );
-      case TipoEvento.entrega:
-        break;
     }
   }
 
@@ -1141,7 +1131,7 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
     TipoEvento.siembra => 'Nueva Siembra',
     TipoEvento.encintado => 'Gestionar Encintado',
     TipoEvento.cosecha => 'Registrar Cosecha',
-    TipoEvento.entrega => 'Registrar Entrega',
+
     null => widget.nombreLote,
   };
 

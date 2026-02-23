@@ -166,7 +166,6 @@ class _ProduccionLotesScreenState extends ConsumerState<ProduccionLotesScreen> {
                             tienePermiso = perms.encintado.crear;
                           case TipoEvento.cosecha:
                             tienePermiso = perms.cosecha.crear;
-                          case TipoEvento.entrega:
                           default:
                             tienePermiso = false;
                         }

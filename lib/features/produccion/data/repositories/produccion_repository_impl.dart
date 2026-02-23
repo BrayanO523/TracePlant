@@ -171,26 +171,6 @@ class ProduccionRepositoryImpl implements ProduccionRepository {
   }
 
   @override
-  Future<Result<CicloProduccion>> registrarEntrega({
-    required String idCiclo,
-    required String productoraId,
-    required String uidUsuario,
-  }) async {
-    try {
-      final ciclo = await _datasource.registrarEntrega(
-        idCiclo: idCiclo,
-        productoraId: productoraId,
-        uidUsuario: uidUsuario,
-      );
-      return Success(ciclo);
-    } on Failure catch (f) {
-      return FailureResult(f);
-    } catch (e) {
-      return FailureResult(ServerFailure('Error al registrar entrega: $e'));
-    }
-  }
-
-  @override
   Future<Result<ProductoraStats>> getStatsProductora(
     String productoraId,
   ) async {

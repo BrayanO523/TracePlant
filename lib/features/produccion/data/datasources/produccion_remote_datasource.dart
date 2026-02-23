@@ -90,7 +90,7 @@ class ProduccionRemoteDatasource {
   }) async {
     Query query = _ciclosRef()
         .where('id_productora', isEqualTo: productoraId)
-        .where('estado', whereIn: ['entregado', 'cancelado']) // Solo inactivos
+        .where('estado', whereIn: ['cosechado', 'cancelado']) // Solo inactivos
         .orderBy('fecha_siembra', descending: true)
         .limit(limit);
 
@@ -310,7 +310,7 @@ class ProduccionRemoteDatasource {
 
     if (asignacionSnap.docs.isEmpty) {
       throw const ValidationFailure(
-        'No tiene una empacadora asignada actualmente. Contacte al administrador para poder entregar su cosecha.',
+        'No tiene una empacadora asignada actualmente. Contacte al administrador para poder registrar su cosecha.',
       );
     }
 
@@ -436,56 +436,6 @@ class ProduccionRemoteDatasource {
   }
 
   // ═══════════════════════════════════════════════════════
-  //  ENTREGA A EMPACADORA
-  // ═══════════════════════════════════════════════════════
-
-  Future<CicloProduccionModel> registrarEntrega({
-    required String idCiclo,
-    required String productoraId,
-    required String uidUsuario,
-  }) async {
-    final cicloDoc = await _ciclosRef().doc(idCiclo).get();
-    if (!cicloDoc.exists) {
-      throw const NotFoundFailure('Ciclo de producción no encontrado');
-    }
-
-    final ciclo = CicloProduccionModel.fromFirestore(cicloDoc);
-
-    if (ciclo.estado != EstadoCiclo.cosechado) {
-      throw const ValidationFailure(
-        'Solo se puede entregar un ciclo en estado "Cosechado"',
-      );
-    }
-
-    final now = DateTime.now();
-
-    await _ciclosRef().doc(idCiclo).update({
-      'estado': EstadoCiclo.entregado.name,
-      'fecha_entrega': Timestamp.fromDate(now),
-      'fecha_actualizacion': FieldValue.serverTimestamp(),
-    });
-
-    return CicloProduccionModel(
-      id: idCiclo,
-      idLote: ciclo.idLote,
-      nombreLote: ciclo.nombreLote,
-      idProductora: productoraId,
-      estado: EstadoCiclo.entregado,
-      fechaSiembra: ciclo.fechaSiembra,
-      area: ciclo.area,
-      variedad: ciclo.variedad,
-      encintados: ciclo.encintados,
-      cantidadCosecha: ciclo.cantidadCosecha,
-      merma: ciclo.merma,
-      mermaPorcentaje: ciclo.mermaPorcentaje,
-      idEmpacadora: ciclo.idEmpacadora,
-      uidRegistradoPor: uidUsuario,
-      fechaCosecha: ciclo.fechaCosecha,
-      fechaEntrega: now,
-    );
-  }
-
-  // ═══════════════════════════════════════════════════════
   //  ESTADÍSTICAS (VISTA PREVIA)
   // ═══════════════════════════════════════════════════════
 
@@ -507,8 +457,8 @@ class ProduccionRemoteDatasource {
       if (ciclo.estado == EstadoCiclo.cancelado) continue;
 
       // Contar ciclos activos (sembrado + encintado, no cosechado/entregado)
-      if (ciclo.estado != EstadoCiclo.cosechado &&
-          ciclo.estado != EstadoCiclo.entregado) {
+      if (ciclo.estado != EstadoCiclo.cancelado &&
+          ciclo.estado != EstadoCiclo.cosechado) {
         ciclosActivos++;
         lotesIds.add(ciclo.idLote);
       }

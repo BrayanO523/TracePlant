@@ -249,7 +249,6 @@ class MapaFincaScreen extends ConsumerWidget {
           (c) =>
               c.idLote == lote.id &&
               c.estado != EstadoCiclo.cosechado &&
-              c.estado != EstadoCiclo.entregado &&
               c.estado != EstadoCiclo.cancelado,
         )
         .firstOrNull;
@@ -303,7 +302,6 @@ class MapaFincaScreen extends ConsumerWidget {
           (c) =>
               c.idLote == lote.id &&
               c.estado != EstadoCiclo.cosechado &&
-              c.estado != EstadoCiclo.entregado &&
               c.estado != EstadoCiclo.cancelado,
         )
         .firstOrNull;
