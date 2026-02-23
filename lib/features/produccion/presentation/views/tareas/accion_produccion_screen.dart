@@ -52,10 +52,14 @@ class _AccionProduccionScreenState
     );
   }
 
-  Widget _buildBody(List<FincaConLotesAccion> fincas) {
-    if (fincas.isEmpty) {
+  Widget _buildBody(List<FincaConLotesAccion> fincasOriginales) {
+    if (fincasOriginales.isEmpty) {
       return const Center(child: Text('No hay fincas registradas.'));
     }
+
+    // Sort fincas by available lots (count) in descending order
+    final fincas = List<FincaConLotesAccion>.from(fincasOriginales)
+      ..sort((a, b) => b.count.compareTo(a.count));
 
     // Auto-select initially
     if (selectedFincaId == null) {
@@ -309,7 +313,7 @@ class _AccionProduccionScreenState
                         if (ciclo != null) ...[
                           const SizedBox(height: 4),
                           Text(
-                            'Activo: \${ciclo.variedad}',
+                            'Variedad: ${ciclo.variedad}',
                             style: TextStyle(
                               fontSize: 13,
                               color: Colors.grey.shade600,

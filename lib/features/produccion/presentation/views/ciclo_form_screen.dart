@@ -8,7 +8,7 @@ import '../../domain/entities/produccion_enums.dart';
 
 import 'package:intl/intl.dart';
 import '../../../administracion/domain/entities/cinta.dart';
-import 'lote_history_screen.dart';
+import '../widgets/ciclo_timeline.dart';
 import '../../../administracion/presentation/screens/cintas_screen.dart';
 
 /// Formulario premium para registrar eventos del ciclo (Siembra, Encintado, Cosecha).
@@ -142,65 +142,90 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
       );
     }
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA), // Surface gris suave
-      appBar: AppBar(
-        title: Text(
-          _tituloFormulario(paso),
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        centerTitle: true,
-        elevation: 0,
-        backgroundColor: Colors.white,
-        foregroundColor: AppColors.textPrimary,
-        actions: [
-          if (ciclo != null)
-            IconButton(
-              tooltip: 'Ver Historial',
-              icon: const Icon(Icons.history_rounded),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => LoteHistoryScreen(
-                      productoraId: widget.productoraId,
-                      loteId: widget.idLote,
-                      nombreLote: widget.nombreLote,
-                    ),
-                  ),
-                );
-              },
-            ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Header Lote (Moderno)
-              _buildLoteHeader(theme, ciclo),
-              const SizedBox(height: 20),
-
-              if (paso == null)
-                _buildCompletedMessage(theme)
-              else ...[
-                // Fecha Evento (Card separado para resaltar)
-                _buildDatePicker(theme),
-                const SizedBox(height: 20),
-
-                // Campos dinámicos en Cards
-                ..._buildDynamicFields(
-                  paso,
-                  ciclo,
-                  theme,
-                  produccionState.isLoading,
-                ),
-              ],
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF5F7FA), // Surface gris suave
+        appBar: AppBar(
+          title: Text(
+            _tituloFormulario(paso),
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          centerTitle: true,
+          elevation: 0,
+          backgroundColor: Colors.white,
+          foregroundColor: AppColors.textPrimary,
+          bottom: const TabBar(
+            labelColor: AppColors.primary,
+            unselectedLabelColor: Colors.grey,
+            indicatorColor: AppColors.primary,
+            tabs: [
+              Tab(icon: Icon(Icons.edit_document), text: 'Formulario'),
+              Tab(icon: Icon(Icons.history_rounded), text: 'Historial'),
             ],
           ),
+        ),
+        body: TabBarView(
+          children: [
+            // Tab 1: Formulario
+            SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Header Lote (Moderno)
+                    _buildLoteHeader(theme, ciclo),
+                    const SizedBox(height: 20),
+
+                    if (paso == null)
+                      _buildCompletedMessage(theme)
+                    else ...[
+                      // Fecha Evento (Card separado para resaltar)
+                      _buildDatePicker(theme),
+                      const SizedBox(height: 20),
+
+                      // Campos dinámicos en Cards
+                      ..._buildDynamicFields(
+                        paso,
+                        ciclo,
+                        theme,
+                        produccionState.isLoading,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            // Tab 2: Historial
+            ciclo != null
+                ? Container(
+                    padding: const EdgeInsets.all(20),
+                    color: Colors.white,
+                    child: CicloTimeline(ciclo: ciclo),
+                  )
+                : Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.history_rounded,
+                          size: 64,
+                          color: Colors.grey.shade300,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No hay historial para este lote aún',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey.shade500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+          ],
         ),
       ),
     );
@@ -397,9 +422,8 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
 
       case TipoEvento.encintado:
         return [
-          _buildEncintadoHistory(theme, ciclo),
-          const SizedBox(height: 20),
-
+          // _buildEncintadoHistory(theme, ciclo), // Removed as it's now in a separate tab
+          // const SizedBox(height: 20), // Removed corresponding SizedBox
           if (canCrearEncintado &&
               (_showEncintadoForm || (ciclo?.encintados.isEmpty ?? true)))
             Column(
@@ -590,154 +614,6 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildEncintadoHistory(ThemeData theme, CicloProduccion? ciclo) {
-    if (ciclo == null || ciclo.encintados.isEmpty) {
-      return Container(
-        padding: const EdgeInsets.all(20),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey.shade200),
-        ),
-        child: Column(
-          children: [
-            Icon(Icons.history, color: Colors.grey.shade300, size: 48),
-            const SizedBox(height: 8),
-            Text(
-              'No hay encintados registrados',
-              style: TextStyle(color: Colors.grey.shade500),
-            ),
-          ],
-        ),
-      );
-    }
-
-    // Filtrar para ocultar los que ya no tienen saldo (solo en ciclo continuo)
-    final activeEncintados = ciclo.esCultivoContinuo
-        ? ciclo.encintados.where((e) => e.disponible > 0).toList()
-        : ciclo.encintados;
-
-    if (activeEncintados.isEmpty) {
-      return Container(
-        padding: const EdgeInsets.all(20),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey.shade200),
-        ),
-        child: Column(
-          children: [
-            Icon(
-              Icons.check_circle_outline,
-              color: AppColors.estadoCosechado.withValues(alpha: 0.5),
-              size: 48,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Todo el inventario ha sido cosechado',
-              style: TextStyle(color: Colors.grey.shade600),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return Card(
-      elevation: 0,
-      color: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Inventario de Encintados (Pendiente)',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-            const SizedBox(height: 16),
-            ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: activeEncintados.length,
-              separatorBuilder: (_, __) => const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8.0),
-                child: Divider(height: 1),
-              ),
-              itemBuilder: (context, index) {
-                final item = activeEncintados[index];
-                return Row(
-                  children: [
-                    Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: _parseColor(item.cintaColorHex),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.black12),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '${item.cintaNombre} · Disp: ${item.disponible.toStringAsFixed(0)} uds',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          Row(
-                            children: [
-                              Text(
-                                _formatDateDisplay(item.fecha),
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.primary.withValues(
-                                    alpha: 0.1,
-                                  ),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  _tiempoTranscurrido(item.fecha),
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    color: AppColors.primary,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    const Icon(
-                      Icons.check_circle,
-                      color: Colors.green,
-                      size: 20,
-                    ),
-                  ],
-                );
-              },
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -979,7 +855,7 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
             borderRadius: BorderRadius.circular(12),
           ),
           child: const Text(
-            'No hay inventario disponible para cosechar en ninguna cohorte.',
+            'No hay disponibilidad para cosechar en ninguna cohorte.',
             style: TextStyle(color: Colors.orange),
           ),
         );
@@ -1000,7 +876,7 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
             value: currentValue,
-            hint: const Text('Seleccione inventario de cinta'),
+            hint: const Text('Seleccione cohorte de cinta'),
             decoration: InputDecoration(
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),

@@ -16,6 +16,16 @@ class CicloTimeline extends StatelessWidget {
 
   const CicloTimeline({super.key, required this.ciclo});
 
+  String _getEdadText(DateTime from, DateTime to) {
+    final days = to.difference(from).inDays;
+    if (days <= 0) return '0 d';
+    if (days < 7) return '$days d';
+    final w = days ~/ 7;
+    final d = days % 7;
+    if (d == 0) return '$w sem';
+    return '$w sem $d d';
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -33,6 +43,7 @@ class CicloTimeline extends StatelessWidget {
         subtitle: '${ciclo.area.toStringAsFixed(1)} mz · ${ciclo.variedad}',
         date: ciclo.fechaSiembra,
         isCompleted: true,
+        ageText: 'Día 0',
       ),
     );
 
@@ -56,6 +67,8 @@ class CicloTimeline extends StatelessWidget {
             date: encintado.fecha,
             isCompleted: true,
             cintaColorHex: encintado.cintaColorHex,
+            ageText:
+                'Edad: ${_getEdadText(ciclo.fechaSiembra, encintado.fecha)}',
           ),
         );
 
@@ -104,6 +117,9 @@ class CicloTimeline extends StatelessWidget {
           date: ciclo.fechaCosecha,
           isCompleted: isCosechado,
           isLast: true,
+          ageText: isCosechado && ciclo.fechaCosecha != null
+              ? 'Edad a cosecha: ${_getEdadText(ciclo.fechaSiembra, ciclo.fechaCosecha!)}'
+              : 'Edad actual: ${_getEdadText(ciclo.fechaSiembra, DateTime.now())}',
         ),
       );
     }
@@ -202,6 +218,7 @@ class CicloTimeline extends StatelessWidget {
     bool isCompleted = false,
     bool isLast = false,
     String? cintaColorHex,
+    String? ageText,
   }) {
     final theme = Theme.of(context);
     final effectiveColor = isCompleted
@@ -280,13 +297,35 @@ class CicloTimeline extends StatelessWidget {
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
-                  if (date != null)
-                    Text(
-                      _formatDate(date),
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: theme.colorScheme.outline,
-                        fontSize: 10,
-                      ),
+                  if (date != null || ageText != null)
+                    Row(
+                      children: [
+                        if (date != null)
+                          Text(
+                            _formatDate(date),
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: theme.colorScheme.outline,
+                              fontSize: 10,
+                            ),
+                          ),
+                        if (date != null && ageText != null)
+                          Text(
+                            ' · ',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: theme.colorScheme.outline,
+                              fontSize: 10,
+                            ),
+                          ),
+                        if (ageText != null)
+                          Text(
+                            ageText,
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: theme.colorScheme.primary,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 10,
+                            ),
+                          ),
+                      ],
                     ),
                 ],
               ),

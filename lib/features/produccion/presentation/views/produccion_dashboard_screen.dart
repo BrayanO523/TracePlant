@@ -4,7 +4,7 @@ import '../../../../app/di/providers.dart';
 import '../../../../app/theme/app_colors.dart';
 import 'produccion_fincas_screen.dart';
 import '../consultas/views/consultas_screen.dart';
-import '../consultas/views/inventario_cosechado_screen.dart';
+import '../consultas/views/cosechas_pendientes_screen.dart';
 import '../consultas/views/proyeccion_cosecha_screen.dart';
 import '../../domain/entities/tipo_accion_produccion.dart';
 import 'tareas/accion_produccion_screen.dart';
@@ -120,47 +120,38 @@ class _ProduccionDashboardScreenState
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      // Determinar tamaño de tarjeta según pantalla (teléfono vs tablet)
-                      double cardWidth = (constraints.maxWidth - 24) / 3;
-                      if (cardWidth < 100) {
-                        cardWidth = constraints
-                            .maxWidth; // Si es muy pequeño, ocupa todo
-                      }
-
-                      return Wrap(
-                        spacing: 12,
-                        runSpacing: 12,
-                        alignment: WrapAlignment.center,
-                        children: [
-                          _buildTaskBtn(
-                            context,
-                            'Siembra',
-                            Icons.grass_rounded,
-                            AppColors.success,
-                            TipoAccionProduccion.siembra,
-                            width: cardWidth,
-                          ),
-                          _buildTaskBtn(
-                            context,
-                            'Encintado',
-                            Icons.loyalty_rounded,
-                            AppColors.warning,
-                            TipoAccionProduccion.encintado,
-                            width: cardWidth,
-                          ),
-                          _buildTaskBtn(
-                            context,
-                            'Cosecha',
-                            Icons.content_cut_rounded,
-                            AppColors.error,
-                            TipoAccionProduccion.cosecha,
-                            width: cardWidth,
-                          ),
-                        ],
-                      );
-                    },
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildTaskBtn(
+                          context,
+                          'Siembra',
+                          Icons.grass_rounded,
+                          AppColors.success,
+                          TipoAccionProduccion.siembra,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildTaskBtn(
+                          context,
+                          'Encintado',
+                          Icons.loyalty_rounded,
+                          AppColors.warning,
+                          TipoAccionProduccion.encintado,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildTaskBtn(
+                          context,
+                          'Cosecha',
+                          Icons.content_cut_rounded,
+                          AppColors.error,
+                          TipoAccionProduccion.cosecha,
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 16),
 
@@ -204,9 +195,8 @@ class _ProduccionDashboardScreenState
     String title,
     IconData icon,
     Color color,
-    TipoAccionProduccion accion, {
-    required double width,
-  }) {
+    TipoAccionProduccion accion,
+  ) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -223,8 +213,7 @@ class _ProduccionDashboardScreenState
         },
         borderRadius: BorderRadius.circular(16),
         child: Container(
-          width: width,
-          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
           decoration: BoxDecoration(
             color: color.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(16),
@@ -233,15 +222,15 @@ class _ProduccionDashboardScreenState
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, color: color, size: 32),
-              const SizedBox(height: 8),
+              Icon(icon, color: color, size: 28),
+              const SizedBox(height: 6),
               Text(
                 title,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: color.withOpacity(0.9),
+                  color: color.withValues(alpha: 0.9),
                   fontWeight: FontWeight.bold,
-                  fontSize: 14,
+                  fontSize: 13,
                 ),
               ),
             ],
@@ -323,7 +312,7 @@ class _StatsGrid extends StatelessWidget {
                   ? () => Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => InventarioCosechadoScreen(
+                        builder: (_) => CosechasPendientesScreen(
                           productoraId: stats['productoraId'] ?? "",
                         ),
                       ),
