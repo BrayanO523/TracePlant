@@ -6,10 +6,10 @@ import '../../../domain/entities/ciclo_produccion.dart';
 import '../../widgets/ciclo_timeline.dart';
 import '../viewmodels/consultas_notifier.dart';
 
-class InventarioCosechadoScreen extends ConsumerWidget {
+class CosechasPendientesScreen extends ConsumerWidget {
   final String productoraId;
 
-  const InventarioCosechadoScreen({super.key, required this.productoraId});
+  const CosechasPendientesScreen({super.key, required this.productoraId});
 
   void _showCicloTimeline(BuildContext context, dynamic ciclo) {
     showModalBottomSheet(
@@ -84,7 +84,7 @@ class InventarioCosechadoScreen extends ConsumerWidget {
                         ),
                       ),
                       Text(
-                        '${state.inventario.length} lotes \u00b7 ${state.totalInventario.toStringAsFixed(0)} unidades',
+                        '${state.cosechasPendientes.length} lotes \u00b7 ${state.totalCosechasPendientes.toStringAsFixed(0)} unidades',
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.grey.shade500,
@@ -100,7 +100,7 @@ class InventarioCosechadoScreen extends ConsumerWidget {
 
           // Lista
           Expanded(
-            child: state.inventario.isEmpty
+            child: state.cosechasPendientes.isEmpty
                 ? Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
@@ -124,11 +124,11 @@ class InventarioCosechadoScreen extends ConsumerWidget {
                   )
                 : ListView.separated(
                     padding: const EdgeInsets.all(16),
-                    itemCount: state.inventario.length,
+                    itemCount: state.cosechasPendientes.length,
                     separatorBuilder: (_, __) => const SizedBox(height: 12),
                     itemBuilder: (context, index) {
-                      final ciclo = state.inventario[index];
-                      return InventarioCard(
+                      final ciclo = state.cosechasPendientes[index];
+                      return CosechaPendienteCard(
                         ciclo: ciclo,
                         productoraId: productoraId,
                         onTap: () => _showCicloTimeline(context, ciclo),
@@ -142,13 +142,13 @@ class InventarioCosechadoScreen extends ConsumerWidget {
   }
 }
 
-/// Card de inventario cosechado con botón de entrega.
-class InventarioCard extends ConsumerWidget {
+/// Card de cosecha pendiente con botón de entrega.
+class CosechaPendienteCard extends ConsumerWidget {
   final CicloProduccion ciclo;
   final String productoraId;
   final VoidCallback onTap;
 
-  const InventarioCard({
+  const CosechaPendienteCard({
     super.key,
     required this.ciclo,
     required this.productoraId,

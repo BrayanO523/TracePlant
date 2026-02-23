@@ -52,9 +52,9 @@ class ConsultasState {
   final double totalCosechado;
   final int totalCiclos;
 
-  // Inventario: ciclos encintados pendientes de cosecha
-  final List<CicloProduccion> inventario;
-  final double totalInventario;
+  // Cosecha Pendiente: ciclos encintados pendientes de cosecha
+  final List<CicloProduccion> cosechasPendientes;
+  final double totalCosechasPendientes;
 
   // Proyecciones de cosecha (Old & New)
   final int semanasParaCosecha;
@@ -81,8 +81,8 @@ class ConsultasState {
     this.totalEncintado = 0,
     this.totalCosechado = 0,
     this.totalCiclos = 0,
-    this.inventario = const [],
-    this.totalInventario = 0,
+    this.cosechasPendientes = const [],
+    this.totalCosechasPendientes = 0,
     this.semanasParaCosecha = 30,
     this.proximasCosechas = const [],
     this.cohortes = const [],
@@ -107,8 +107,8 @@ class ConsultasState {
     double? totalEncintado,
     double? totalCosechado,
     int? totalCiclos,
-    List<CicloProduccion>? inventario,
-    double? totalInventario,
+    List<CicloProduccion>? cosechasPendientes,
+    double? totalCosechasPendientes,
     int? semanasParaCosecha,
     List<ProximaCosechaLocal>? proximasCosechas,
     List<CohorteResumen>? cohortes,
@@ -132,8 +132,9 @@ class ConsultasState {
       totalEncintado: totalEncintado ?? this.totalEncintado,
       totalCosechado: totalCosechado ?? this.totalCosechado,
       totalCiclos: totalCiclos ?? this.totalCiclos,
-      inventario: inventario ?? this.inventario,
-      totalInventario: totalInventario ?? this.totalInventario,
+      cosechasPendientes: cosechasPendientes ?? this.cosechasPendientes,
+      totalCosechasPendientes:
+          totalCosechasPendientes ?? this.totalCosechasPendientes,
       semanasParaCosecha: semanasParaCosecha ?? this.semanasParaCosecha,
       proximasCosechas: proximasCosechas ?? this.proximasCosechas,
       cohortes: cohortes ?? this.cohortes,
@@ -214,7 +215,7 @@ class ConsultasNotifier extends StateNotifier<ConsultasState> {
               // Al recibir nuevos datos, actualizamos la lista maestra y reaplicamos filtros
               state = state.copyWith(isLoading: false, ciclos: ciclos);
               _applyFilters();
-              _calculateInventario();
+              _calculateCosechasPendientes();
             }
           },
           onError: (err) {
@@ -260,8 +261,8 @@ class ConsultasNotifier extends StateNotifier<ConsultasState> {
         fechaFin: endDate,
         sortAscending: sortAscending ?? false,
         // Mantener calculados (se recalcularán en _applyFilters)
-        inventario: state.inventario,
-        totalInventario: state.totalInventario,
+        cosechasPendientes: state.cosechasPendientes,
+        totalCosechasPendientes: state.totalCosechasPendientes,
         semanasParaCosecha: state.semanasParaCosecha,
         cohortes: state.cohortes,
         proximasCosechas: state.proximasCosechas,
@@ -302,8 +303,8 @@ class ConsultasNotifier extends StateNotifier<ConsultasState> {
       totalEncintado: state.totalEncintado,
       totalCosechado: state.totalCosechado,
       totalCiclos: state.totalCiclos,
-      inventario: state.inventario,
-      totalInventario: state.totalInventario,
+      cosechasPendientes: state.cosechasPendientes,
+      totalCosechasPendientes: state.totalCosechasPendientes,
       semanasParaCosecha: state.semanasParaCosecha,
       proximasCosechas: state.proximasCosechas,
       cohortes: state.cohortes,
@@ -341,8 +342,8 @@ class ConsultasNotifier extends StateNotifier<ConsultasState> {
       totalCiclos: state.totalCiclos,
       semanasParaCosecha: state.semanasParaCosecha,
       proximasCosechas: state.proximasCosechas,
-      inventario: state.inventario,
-      totalInventario: state.totalInventario,
+      cosechasPendientes: state.cosechasPendientes,
+      totalCosechasPendientes: state.totalCosechasPendientes,
       cohortes: state.cohortes,
     );
     _applyFilters();
@@ -443,8 +444,8 @@ class ConsultasNotifier extends StateNotifier<ConsultasState> {
     );
   }
 
-  /// Calcula inventario: ciclos cosechados pendientes de entrega a empacadora
-  void _calculateInventario() {
+  /// Calcula lotes cosechados pendientes de entrega a empacadora
+  void _calculateCosechasPendientes() {
     final inv = state.ciclos
         .where((c) => c.estado == EstadoCiclo.cosechado)
         .toList();
@@ -457,7 +458,10 @@ class ConsultasNotifier extends StateNotifier<ConsultasState> {
       0,
       (acumulador, c) => acumulador + (c.cantidadCosecha ?? 0),
     );
-    state = state.copyWith(inventario: inv, totalInventario: total);
+    state = state.copyWith(
+      cosechasPendientes: inv,
+      totalCosechasPendientes: total,
+    );
   }
 
   /// Calcula proyecciones de cosecha agrupadas por cohortes semanales (Logica Nueva)
@@ -498,11 +502,11 @@ class ConsultasNotifier extends StateNotifier<ConsultasState> {
     final List<ProximaCosechaLocal> proyeccionesViejas = [];
 
     for (var ciclo
-        in state.inventario.isEmpty
+        in state.cosechasPendientes.isEmpty
             ? state.ciclosFiltrados.where(
                 (c) => c.estado == EstadoCiclo.encintado,
               )
-            : state.inventario) {
+            : state.cosechasPendientes) {
       final fecha = ciclo.proyeccionCosecha(state.semanasParaCosecha);
       if (fecha != null) {
         final today = DateTime(now.year, now.month, now.day);

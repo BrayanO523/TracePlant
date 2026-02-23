@@ -341,9 +341,11 @@ class ProduccionRemoteDatasource {
       }
 
       final encintado = ciclo.encintados[indexEncintado];
-      if (cantidad > encintado.disponible) {
-        throw const ValidationFailure(
-          'La cantidad a cosechar no puede exceder el inventario disponible de esta cinta.',
+      final maxAllowed =
+          encintado.disponible; // Assuming this is the correct variable
+      if (cantidad > maxAllowed) {
+        throw Exception(
+          'La cantidad a cosechar no puede exceder la disponibilidad de esta cinta.',
         );
       }
 
@@ -514,7 +516,7 @@ class ProduccionRemoteDatasource {
       // Volumen Cosecha (Histórico Total): Todo lo que ya se cortó.
       volumenCosecha += ciclo.cantidadCosecha ?? 0;
 
-      // Volumen En Cinta (Inventario Activo): Solo lo que está ACTUALMENTE madurando en el campo.
+      // Volumen En Cinta (Stock Activo): Solo lo que está ACTUALMENTE madurando en el campo.
       if (ciclo.estado == EstadoCiclo.encintado) {
         volumenEncintado += ciclo.totalEncintado;
       }

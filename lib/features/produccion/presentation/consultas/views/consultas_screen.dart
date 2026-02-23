@@ -10,7 +10,7 @@ import '../widgets/export_button.dart';
 import '../logic/pdf_report_generator.dart';
 import '../../../../../features/administracion/domain/entities/cinta.dart';
 
-import 'inventario_cosechado_screen.dart';
+import 'cosechas_pendientes_screen.dart';
 import 'proyeccion_cosecha_screen.dart';
 import 'consultas_detalle_views.dart';
 
@@ -207,7 +207,7 @@ class _ConsultasScreenState extends ConsumerState<ConsultasScreen> {
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => InventarioCosechadoScreen(
+                    builder: (_) => CosechasPendientesScreen(
                       productoraId: widget.productoraId,
                     ),
                   ),
@@ -265,7 +265,7 @@ class _ConsultasScreenState extends ConsumerState<ConsultasScreen> {
                 ),
                 _GlobalStatCard(
                   title: 'A Cosechar',
-                  value: state.totalInventario.toStringAsFixed(0),
+                  value: state.totalCosechasPendientes.toStringAsFixed(0),
                   icon: Icons.inventory_2_rounded,
                   color: Colors.orange,
                   width: cardWidth,
