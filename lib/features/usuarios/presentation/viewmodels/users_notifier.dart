@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/role_constants.dart';
 import '../../../../core/constants/user_permissions.dart';
@@ -38,6 +39,7 @@ class UsersNotifier extends StateNotifier<UsersState> {
   final UsersRepository _repository;
   final String companyId;
   final UserRole companyRole;
+  StreamSubscription<Result<List<UserModel>>>? _subscription;
 
   UsersNotifier({
     required UsersRepository repository,
@@ -48,17 +50,24 @@ class UsersNotifier extends StateNotifier<UsersState> {
     loadEmployees();
   }
 
+  @override
+  void dispose() {
+    _subscription?.cancel();
+    super.dispose();
+  }
+
   Future<void> loadEmployees() async {
     state = state.copyWith(isLoading: true, error: null);
-
-    final result = await _repository.getEmployees(companyId);
-
-    switch (result) {
-      case Success(data: final employees):
-        state = state.copyWith(employees: employees, isLoading: false);
-      case FailureResult(failure: final f):
-        state = state.copyWith(isLoading: false, error: f.message);
-    }
+    _subscription?.cancel();
+    _subscription = _repository.watchEmployees(companyId).listen((result) {
+      if (!mounted) return;
+      switch (result) {
+        case Success(data: final employees):
+          state = state.copyWith(employees: employees, isLoading: false);
+        case FailureResult(failure: final f):
+          state = state.copyWith(isLoading: false, error: f.message);
+      }
+    });
   }
 
   Future<void> createEmployee({
@@ -110,8 +119,7 @@ class UsersNotifier extends StateNotifier<UsersState> {
 
     switch (result) {
       case Success():
-        // Recargar lista para reflejar cambios
-        await loadEmployees();
+        // El stream recargará automáticamente la lista.
         state = state.copyWith(successMessage: 'Empleado actualizado');
       case FailureResult(failure: final f):
         state = state.copyWith(

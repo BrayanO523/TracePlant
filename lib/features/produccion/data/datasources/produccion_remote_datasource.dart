@@ -149,6 +149,23 @@ class ProduccionRemoteDatasource {
       );
     }
 
+    // ── OBTENER CONFIGURACIÓN DE VARIEDAD ──
+    bool esCultivoContinuo = true; // Por defecto
+    try {
+      final varSnap = await _firestore
+          .collection('variedades')
+          .where('productoraId', isEqualTo: productoraId)
+          .where('nombre', isEqualTo: variedad)
+          .limit(1)
+          .get();
+      if (varSnap.docs.isNotEmpty) {
+        esCultivoContinuo =
+            varSnap.docs.first.data()['esCultivoContinuo'] as bool? ?? true;
+      }
+    } catch (_) {
+      // Si falla, se queda con el default true
+    }
+
     final now = DateTime.now();
     final cicloRef = _ciclosRef().doc();
     final idCiclo = cicloRef.id;
@@ -162,6 +179,7 @@ class ProduccionRemoteDatasource {
       fechaSiembra: now,
       area: area,
       variedad: variedad,
+      esCultivoContinuo: esCultivoContinuo, // Asignar el flag correcto
       encintados: const [],
       uidRegistradoPor: uidUsuario,
     );
@@ -263,6 +281,7 @@ class ProduccionRemoteDatasource {
 
   Future<CicloProduccionModel> registrarCosecha({
     required String idCiclo,
+    String? idEncintado,
     required double cantidad,
     required String productoraId,
     required String uidUsuario,
@@ -297,54 +316,121 @@ class ProduccionRemoteDatasource {
 
     final idEmpacadora =
         asignacionSnap.docs.first.get('id_empacadora') as String;
-
     final now = DateTime.now();
-
     final batch = _firestore.batch();
+    final cicloRef = _ciclosRef().doc(idCiclo);
 
-    final cantidadEncintadoTotal = ciclo.totalEncintado;
-    final merma = cantidadEncintadoTotal - cantidad;
-    final mermaPorcentaje = cantidadEncintadoTotal > 0
-        ? (merma / cantidadEncintadoTotal) * 100
-        : 0.0;
+    // LÓGICA DOBLADA SEGÚN EL TIPO DE CULTIVO
+    if (ciclo.esCultivoContinuo) {
+      // ───────────────────────────────────────────
+      // LÓGICA DE COSECHA DE COHORTE (BANANO)
+      // ───────────────────────────────────────────
+      if (idEncintado == null) {
+        throw const ValidationFailure(
+          'Debe seleccionar qué cinta cosechar para cultivos continuos.',
+        );
+      }
 
-    batch.update(_ciclosRef().doc(idCiclo), {
-      'estado': EstadoCiclo.cosechado.name,
-      'cantidad_cosecha': cantidad,
-      'merma': merma,
-      'merma_porcentaje': mermaPorcentaje,
-      'id_empacadora': idEmpacadora,
-      'fecha_cosecha': Timestamp.fromDate(now),
-      'fecha_actualizacion': FieldValue.serverTimestamp(),
-    });
+      final indexEncintado = ciclo.encintados.indexWhere(
+        (e) => e.id == idEncintado,
+      );
+      if (indexEncintado == -1) {
+        throw const NotFoundFailure(
+          'La cinta seleccionada no existe en este ciclo.',
+        );
+      }
 
-    // Liberar lote
-    final loteRef = _lotesRef().doc(ciclo.idLote);
-    batch.update(loteRef, {
-      'estado': EstadoLote.libre.name,
-      'color_cinta': null,
-      'fecha_actualizacion': FieldValue.serverTimestamp(),
-    });
+      final encintado = ciclo.encintados[indexEncintado];
+      if (cantidad > encintado.disponible) {
+        throw const ValidationFailure(
+          'La cantidad a cosechar no puede exceder el inventario disponible de esta cinta.',
+        );
+      }
 
-    await batch.commit();
+      // Actualizar la cohorte específica
+      final updatedEncintado = DetalleEncintado(
+        id: encintado.id,
+        cintaId: encintado.cintaId,
+        cintaNombre: encintado.cintaNombre,
+        cintaColorHex: encintado.cintaColorHex,
+        cantidad: encintado.cantidad,
+        cantidadCosechada: encintado.cantidadCosechada + cantidad,
+        fecha: encintado.fecha,
+        usuarioId: encintado.usuarioId,
+      );
 
-    return CicloProduccionModel(
-      id: idCiclo,
-      idLote: ciclo.idLote,
-      nombreLote: ciclo.nombreLote,
-      idProductora: productoraId,
-      estado: EstadoCiclo.cosechado,
-      fechaSiembra: ciclo.fechaSiembra,
-      area: ciclo.area,
-      variedad: ciclo.variedad,
-      encintados: ciclo.encintados,
-      cantidadCosecha: cantidad,
-      merma: merma,
-      mermaPorcentaje: mermaPorcentaje,
-      idEmpacadora: idEmpacadora,
-      uidRegistradoPor: uidUsuario,
-      fechaCosecha: now,
-    );
+      final newList = List<DetalleEncintado>.from(ciclo.encintados);
+      newList[indexEncintado] = updatedEncintado;
+
+      batch.update(cicloRef, {
+        'encintados': newList.map((e) => e.toMap()).toList(),
+        'fecha_actualizacion': FieldValue.serverTimestamp(),
+        // No cerramos el ciclo, no actualizamos mermas globales (eso se calculará por cohorte luego)
+      });
+
+      await batch.commit();
+
+      return CicloProduccionModel(
+        id: ciclo.id,
+        idLote: ciclo.idLote,
+        nombreLote: ciclo.nombreLote,
+        idProductora: productoraId,
+        estado: ciclo.estado, // Mantiene Sembrado o Encintado
+        fechaSiembra: ciclo.fechaSiembra,
+        area: ciclo.area,
+        variedad: ciclo.variedad,
+        esCultivoContinuo: ciclo.esCultivoContinuo,
+        encintados: newList, // Update memory list
+      );
+    } else {
+      // ───────────────────────────────────────────
+      // LÓGICA DE COSECHA GLOBAL (MAÍZ, ESTACIONAL)
+      // ───────────────────────────────────────────
+      final cantidadEncintadoTotal = ciclo.totalEncintado;
+      final merma = cantidadEncintadoTotal - cantidad;
+      final mermaPorcentaje = cantidadEncintadoTotal > 0
+          ? (merma / cantidadEncintadoTotal) * 100
+          : 0.0;
+
+      batch.update(cicloRef, {
+        'estado': EstadoCiclo.cosechado.name,
+        'cantidad_cosecha': cantidad,
+        'merma': merma,
+        'merma_porcentaje': mermaPorcentaje,
+        'id_empacadora': idEmpacadora,
+        'fecha_cosecha': Timestamp.fromDate(now),
+        'fecha_actualizacion': FieldValue.serverTimestamp(),
+      });
+
+      // Liberar lote solo si NO es cultivo continuo
+      final loteRef = _lotesRef().doc(ciclo.idLote);
+      batch.update(loteRef, {
+        'estado': EstadoLote.libre.name,
+        'color_cinta': null,
+        'fecha_actualizacion': FieldValue.serverTimestamp(),
+      });
+
+      await batch.commit();
+
+      return CicloProduccionModel(
+        id: idCiclo,
+        idLote: ciclo.idLote,
+        nombreLote: ciclo.nombreLote,
+        idProductora: productoraId,
+        estado: EstadoCiclo.cosechado,
+        fechaSiembra: ciclo.fechaSiembra,
+        area: ciclo.area,
+        variedad: ciclo.variedad,
+        esCultivoContinuo: ciclo.esCultivoContinuo,
+        encintados: ciclo.encintados,
+        cantidadCosecha: cantidad,
+        merma: merma,
+        mermaPorcentaje: mermaPorcentaje,
+        idEmpacadora: idEmpacadora,
+        uidRegistradoPor: uidUsuario,
+        fechaCosecha: now,
+      );
+    }
   }
 
   // ═══════════════════════════════════════════════════════

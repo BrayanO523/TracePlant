@@ -16,6 +16,8 @@ abstract class UsersRepository {
 
   Future<Result<List<UserModel>>> getEmployees(String companyId);
 
+  Stream<Result<List<UserModel>>> watchEmployees(String companyId);
+
   Future<Result<void>> updateEmployee({
     required String uid,
     String? displayName,

@@ -51,6 +51,7 @@ abstract class ProduccionRepository {
 
   Future<Result<CicloProduccion>> registrarCosecha({
     required String idCiclo,
+    String? idEncintado, // Nullable para cultivos no-continuos
     required double cantidad,
     required String productoraId,
     required String uidUsuario,

@@ -24,6 +24,9 @@ abstract class UsersRemoteDatasource {
   /// Lista todos los usuarios de una empresa (por id_empresa).
   Future<List<UserModel>> getEmployees(String companyId);
 
+  /// Escucha en tiempo real la lista de usuarios de una empresa.
+  Stream<List<UserModel>> watchEmployees(String companyId);
+
   /// Actualiza el perfil de un empleado (permisos, nombre, activo).
   Future<void> updateEmployee({
     required String uid,
@@ -100,6 +103,18 @@ class UsersRemoteDatasourceImpl implements UsersRemoteDatasource {
         .get();
 
     return snapshot.docs.map((doc) => UserModel.fromDocument(doc)).toList();
+  }
+
+  @override
+  Stream<List<UserModel>> watchEmployees(String companyId) {
+    return _firestore
+        .collection(FirestorePaths.usuarios)
+        .where('id_empresa', isEqualTo: companyId)
+        .snapshots()
+        .map(
+          (snapshot) =>
+              snapshot.docs.map((doc) => UserModel.fromDocument(doc)).toList(),
+        );
   }
 
   @override

@@ -16,6 +16,7 @@ class AdministracionRepositoryImpl implements IAdministracionRepository {
 
   /// Cache del companyId (productoraId) del usuario actual.
   String? _cachedProducerId;
+  String? _cachedUid;
 
   AdministracionRepositoryImpl({
     FirebaseFirestore? firestore,
@@ -27,11 +28,14 @@ class AdministracionRepositoryImpl implements IAdministracionRepository {
 
   /// Resuelve el companyId (id_empresa) del usuario desde su perfil Firestore.
   Future<String> _getProducerId() async {
-    if (_cachedProducerId != null && _cachedProducerId!.isNotEmpty) {
-      return _cachedProducerId!;
-    }
     final uid = _currentUserId;
     if (uid.isEmpty) return '';
+
+    if (_cachedProducerId != null &&
+        _cachedProducerId!.isNotEmpty &&
+        _cachedUid == uid) {
+      return _cachedProducerId!;
+    }
 
     // 1. Obtener datos del usuario
     final doc = await _firestore.collection('usuarios').doc(uid).get();
@@ -66,6 +70,7 @@ class AdministracionRepositoryImpl implements IAdministracionRepository {
     }
 
     _cachedProducerId = empresaId;
+    _cachedUid = uid;
     return _cachedProducerId!;
   }
 
@@ -128,6 +133,7 @@ class AdministracionRepositoryImpl implements IAdministracionRepository {
       nombre: variedad.nombre,
       descripcion: variedad.descripcion,
       productoraId: producerId,
+      esCultivoContinuo: variedad.esCultivoContinuo,
     );
     await docRef.set(model.toFirestore());
   }
@@ -238,7 +244,8 @@ class AdministracionRepositoryImpl implements IAdministracionRepository {
   Future<void> saveLote(Lote lote) async {
     final producerId = await _getProducerId();
     final collection = _firestore.collection('lotes');
-    final docRef = lote.id.isEmpty ? collection.doc() : collection.doc(lote.id);
+    final isNew = lote.id.isEmpty;
+    final docRef = isNew ? collection.doc() : collection.doc(lote.id);
 
     final model = LoteModel(
       id: docRef.id,
@@ -246,10 +253,18 @@ class AdministracionRepositoryImpl implements IAdministracionRepository {
       area: lote.area,
       fincaId: lote.fincaId,
       variedadId: lote.variedadId,
+      variedadNombre: lote.variedadNombre,
       productoraId: producerId,
       estado: lote.estado,
+      coordenadas: lote.coordenadas,
     );
-    await docRef.set(model.toFirestore());
+
+    if (isNew) {
+      await docRef.set(model.toFirestore());
+    } else {
+      // Merge para no borrar campos que no se envían en este save
+      await docRef.set(model.toFirestore(), SetOptions(merge: true));
+    }
   }
 
   @override

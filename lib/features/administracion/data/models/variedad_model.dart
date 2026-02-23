@@ -7,6 +7,7 @@ class VariedadModel extends Variedad {
     required super.nombre,
     required super.descripcion,
     required super.productoraId,
+    super.esCultivoContinuo = true, // default compatibility
   });
 
   factory VariedadModel.fromFirestore(DocumentSnapshot doc) {
@@ -16,6 +17,7 @@ class VariedadModel extends Variedad {
       nombre: data['nombre'] ?? '',
       descripcion: data['descripcion'] ?? '',
       productoraId: data['productoraId'] ?? '',
+      esCultivoContinuo: data['esCultivoContinuo'] as bool? ?? true,
     );
   }
 
@@ -24,6 +26,7 @@ class VariedadModel extends Variedad {
       'nombre': nombre,
       'descripcion': descripcion,
       'productoraId': productoraId,
+      'esCultivoContinuo': esCultivoContinuo,
     };
   }
 }

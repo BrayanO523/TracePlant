@@ -217,6 +217,7 @@ class ProduccionNotifier extends StateNotifier<ProduccionState> {
 
   Future<bool> registrarCosecha({
     required String idCiclo,
+    String? idEncintado,
     required double cantidad,
     required String uidUsuario,
   }) async {
@@ -236,6 +237,7 @@ class ProduccionNotifier extends StateNotifier<ProduccionState> {
 
     final result = await _repository.registrarCosecha(
       idCiclo: idCiclo,
+      idEncintado: idEncintado,
       cantidad: cantidad,
       productoraId: productoraId,
       uidUsuario: uidUsuario,
@@ -243,11 +245,14 @@ class ProduccionNotifier extends StateNotifier<ProduccionState> {
 
     switch (result) {
       case Success(data: final ciclo):
+        final msg = ciclo.esCultivoContinuo
+            ? 'Cosecha registrada con éxito.'
+            : 'Cosecha registrada. Merma general: ${ciclo.merma?.toStringAsFixed(2) ?? "N/A"}';
+
         state = state.copyWith(
           isLoading: false,
           cicloSeleccionado: ciclo,
-          successMessage:
-              'Cosecha registrada. Merma: ${ciclo.merma?.toStringAsFixed(2) ?? "N/A"}',
+          successMessage: msg,
         );
         return true;
       case FailureResult(failure: final f):

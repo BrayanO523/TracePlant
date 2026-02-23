@@ -118,6 +118,19 @@ final currentUserStreamProvider = StreamProvider<AppUser?>((ref) {
   );
 });
 
+// Stream para observar a un empleado en particular en tiempo real
+final employeeStreamProvider = StreamProvider.family<UserModel?, String>((
+  ref,
+  uid,
+) {
+  return ref
+      .read(firestoreProvider)
+      .collection(FirestorePaths.usuarios)
+      .doc(uid)
+      .snapshots()
+      .map((doc) => doc.exists ? UserModel.fromDocument(doc) : null);
+});
+
 // ═══════════════════════════════════════════════════════
 //  PRODUCCION FEATURE (Lotes y Ciclos)
 // ═══════════════════════════════════════════════════════

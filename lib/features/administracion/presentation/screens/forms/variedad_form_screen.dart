@@ -16,6 +16,7 @@ class _VariedadFormScreenState extends ConsumerState<VariedadFormScreen> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nombreCtrl;
   late TextEditingController _descripcionCtrl;
+  bool _esCultivoContinuo = true; // Por defecto Plátano/Banano
 
   @override
   void initState() {
@@ -24,6 +25,7 @@ class _VariedadFormScreenState extends ConsumerState<VariedadFormScreen> {
     _descripcionCtrl = TextEditingController(
       text: widget.variedad?.descripcion ?? '',
     );
+    _esCultivoContinuo = widget.variedad?.esCultivoContinuo ?? true;
   }
 
   @override
@@ -45,6 +47,7 @@ class _VariedadFormScreenState extends ConsumerState<VariedadFormScreen> {
               id: widget.variedad?.id,
               nombre: nombre,
               descripcion: descripcion,
+              esCultivoContinuo: _esCultivoContinuo,
             );
         if (mounted) Navigator.pop(context);
       } catch (e) {
@@ -84,6 +87,17 @@ class _VariedadFormScreenState extends ConsumerState<VariedadFormScreen> {
                 controller: _descripcionCtrl,
                 decoration: const InputDecoration(labelText: 'Descripción'),
                 validator: (v) => v!.isEmpty ? 'Requerido' : null,
+              ),
+              const SizedBox(height: 16),
+              SwitchListTile(
+                title: const Text('¿Es Cultivo Continuo?'),
+                subtitle: const Text(
+                  'Activa para cultivos como Plátano/Banano. Desactiva para estacionales (Maíz, Frijol).',
+                ),
+                value: _esCultivoContinuo,
+                onChanged: (val) => setState(() => _esCultivoContinuo = val),
+                activeColor: Colors.green,
+                contentPadding: EdgeInsets.zero,
               ),
               const SizedBox(height: 32),
               SizedBox(

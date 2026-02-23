@@ -39,6 +39,7 @@ class AdminViewModel extends StateNotifier<AsyncValue<void>> {
     String? id, // Optional
     required String nombre,
     required String descripcion,
+    bool esCultivoContinuo = true,
   }) async {
     state = const AsyncValue.loading();
     try {
@@ -47,6 +48,7 @@ class AdminViewModel extends StateNotifier<AsyncValue<void>> {
         nombre: nombre,
         descripcion: descripcion,
         productoraId: _currentUserId,
+        esCultivoContinuo: esCultivoContinuo,
       );
       await ref.read(administracionRepositoryProvider).saveVariedad(variedad);
       state = const AsyncValue.data(null);
@@ -84,6 +86,7 @@ class AdminViewModel extends StateNotifier<AsyncValue<void>> {
     required double area,
     String? variedadId,
     String? variedadNombre,
+    List<Map<String, double>> coordenadas = const [],
   }) async {
     state = const AsyncValue.loading();
     try {
@@ -95,9 +98,6 @@ class AdminViewModel extends StateNotifier<AsyncValue<void>> {
         throw Exception('La Finca especificada no existe.');
       }
 
-      // NOTE: We removed the check against available area because Finca area is now dynamic.
-      // It grows as we add lotes.
-
       // 2. Guardar Lote
       final lote = Lote(
         id: id ?? '',
@@ -108,6 +108,7 @@ class AdminViewModel extends StateNotifier<AsyncValue<void>> {
         variedadNombre: variedadNombre,
         productoraId: _currentUserId,
         estado: 'produccion',
+        coordenadas: coordenadas,
       );
 
       await ref.read(administracionRepositoryProvider).saveLote(lote);

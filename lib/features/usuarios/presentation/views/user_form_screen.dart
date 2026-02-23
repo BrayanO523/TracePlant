@@ -4,6 +4,7 @@ import '../../../../app/di/providers.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/constants/role_constants.dart';
 import '../../../../core/constants/user_permissions.dart';
+import '../../../auth/data/models/user_model.dart';
 import '../../../auth/domain/entities/app_user.dart';
 
 /// Formulario para crear o editar un empleado.
@@ -13,12 +14,14 @@ class UserFormScreen extends ConsumerStatefulWidget {
   final String companyId;
   final UserRole companyRole;
   final AppUser? existingUser;
+  final bool readOnly;
 
   const UserFormScreen({
     super.key,
     required this.companyId,
     required this.companyRole,
     this.existingUser,
+    this.readOnly = false,
   });
 
   @override
@@ -60,6 +63,22 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isEditing) {
+      ref.listen<AsyncValue<UserModel?>>(
+        employeeStreamProvider(widget.existingUser!.uid),
+        (previous, next) {
+          if (next.hasValue && next.value != null) {
+            final remotePerms = next.value!.permissions;
+            if (remotePerms != _permissions) {
+              setState(() {
+                _permissions = remotePerms;
+              });
+            }
+          }
+        },
+      );
+    }
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -119,6 +138,7 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
               TextFormField(
                 controller: _nameController,
                 textCapitalization: TextCapitalization.words,
+                readOnly: widget.readOnly,
                 decoration: InputDecoration(
                   labelText: 'Nombre completo',
                   prefixIcon: const Icon(Icons.person_outline_rounded),
@@ -231,34 +251,49 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
                       title: 'Colores de Cinta',
                       icon: Icons.palette_rounded,
                       permission: _permissions.cintas,
-                      onChanged: (p) => setState(
-                        () => _permissions = _permissions.copyWith(cintas: p),
-                      ),
+                      onChanged: widget.readOnly
+                          ? (_) {}
+                          : (p) => setState(
+                              () => _permissions = _permissions.copyWith(
+                                cintas: p,
+                              ),
+                            ),
                     ),
                     _PermissionSubModule(
                       title: 'Variedades',
                       icon: Icons.local_florist_rounded,
                       permission: _permissions.variedades,
-                      onChanged: (p) => setState(
-                        () =>
-                            _permissions = _permissions.copyWith(variedades: p),
-                      ),
+                      onChanged: widget.readOnly
+                          ? (_) {}
+                          : (p) => setState(
+                              () => _permissions = _permissions.copyWith(
+                                variedades: p,
+                              ),
+                            ),
                     ),
                     _PermissionSubModule(
                       title: 'Fincas',
                       icon: Icons.landscape_rounded,
                       permission: _permissions.fincas,
-                      onChanged: (p) => setState(
-                        () => _permissions = _permissions.copyWith(fincas: p),
-                      ),
+                      onChanged: widget.readOnly
+                          ? (_) {}
+                          : (p) => setState(
+                              () => _permissions = _permissions.copyWith(
+                                fincas: p,
+                              ),
+                            ),
                     ),
                     _PermissionSubModule(
                       title: 'Lotes',
                       icon: Icons.grid_view_rounded,
                       permission: _permissions.lotes,
-                      onChanged: (p) => setState(
-                        () => _permissions = _permissions.copyWith(lotes: p),
-                      ),
+                      onChanged: widget.readOnly
+                          ? (_) {}
+                          : (p) => setState(
+                              () => _permissions = _permissions.copyWith(
+                                lotes: p,
+                              ),
+                            ),
                     ),
                   ],
                 ),
@@ -275,28 +310,39 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
                       icon: Icons.grass_rounded,
                       permission: _permissions.siembra,
                       actions: const ['ver', 'crear'],
-                      onChanged: (p) => setState(
-                        () => _permissions = _permissions.copyWith(siembra: p),
-                      ),
+                      onChanged: widget.readOnly
+                          ? (_) {}
+                          : (p) => setState(
+                              () => _permissions = _permissions.copyWith(
+                                siembra: p,
+                              ),
+                            ),
                     ),
                     _PermissionSubModule(
                       title: 'Encintado',
                       icon: Icons.confirmation_number_rounded,
                       permission: _permissions.encintado,
                       actions: const ['ver', 'crear'],
-                      onChanged: (p) => setState(
-                        () =>
-                            _permissions = _permissions.copyWith(encintado: p),
-                      ),
+                      onChanged: widget.readOnly
+                          ? (_) {}
+                          : (p) => setState(
+                              () => _permissions = _permissions.copyWith(
+                                encintado: p,
+                              ),
+                            ),
                     ),
                     _PermissionSubModule(
                       title: 'Cosecha',
                       icon: Icons.agriculture_rounded,
                       permission: _permissions.cosecha,
                       actions: const ['ver', 'crear'],
-                      onChanged: (p) => setState(
-                        () => _permissions = _permissions.copyWith(cosecha: p),
-                      ),
+                      onChanged: widget.readOnly
+                          ? (_) {}
+                          : (p) => setState(
+                              () => _permissions = _permissions.copyWith(
+                                cosecha: p,
+                              ),
+                            ),
                     ),
                   ],
                 ),
@@ -313,10 +359,13 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
                       icon: Icons.query_stats_rounded,
                       permission: _permissions.consultas,
                       actions: const ['ver'],
-                      onChanged: (p) => setState(
-                        () =>
-                            _permissions = _permissions.copyWith(consultas: p),
-                      ),
+                      onChanged: widget.readOnly
+                          ? (_) {}
+                          : (p) => setState(
+                              () => _permissions = _permissions.copyWith(
+                                consultas: p,
+                              ),
+                            ),
                     ),
                   ],
                 ),
@@ -332,9 +381,13 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
                       title: 'Gestión de Usuarios',
                       icon: Icons.people_rounded,
                       permission: _permissions.usuarios,
-                      onChanged: (p) => setState(
-                        () => _permissions = _permissions.copyWith(usuarios: p),
-                      ),
+                      onChanged: widget.readOnly
+                          ? (_) {}
+                          : (p) => setState(
+                              () => _permissions = _permissions.copyWith(
+                                usuarios: p,
+                              ),
+                            ),
                     ),
                   ],
                 ),
@@ -351,11 +404,13 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
                       icon: Icons.manage_accounts_rounded,
                       permission: _permissions.ajustesEmpresa,
                       actions: const ['ver', 'editar'], // Solo ver y editar
-                      onChanged: (p) => setState(
-                        () => _permissions = _permissions.copyWith(
-                          ajustesEmpresa: p,
-                        ),
-                      ),
+                      onChanged: widget.readOnly
+                          ? (_) {}
+                          : (p) => setState(
+                              () => _permissions = _permissions.copyWith(
+                                ajustesEmpresa: p,
+                              ),
+                            ),
                     ),
                   ],
                 ),
@@ -364,46 +419,49 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
               ],
 
               // --- Botón Acción ---
-              SizedBox(
-                height: 52,
-                child: ElevatedButton.icon(
-                  onPressed: _isSubmitting ? null : _submit,
-                  icon: _isSubmitting
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
+              if (!widget.readOnly)
+                SizedBox(
+                  height: 52,
+                  child: ElevatedButton.icon(
+                    onPressed: _isSubmitting ? null : _submit,
+                    icon: _isSubmitting
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Icon(
+                            _isEditing
+                                ? Icons.save_rounded
+                                : Icons.person_add_rounded,
                           ),
-                        )
-                      : Icon(
-                          _isEditing
-                              ? Icons.save_rounded
-                              : Icons.person_add_rounded,
-                        ),
-                  label: Text(
-                    _isSubmitting
-                        ? (_isEditing ? 'Guardando...' : 'Creando...')
-                        : (_isEditing ? 'Guardar Cambios' : 'Crear Empleado'),
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
+                    label: Text(
+                      _isSubmitting
+                          ? (_isEditing ? 'Guardando...' : 'Creando...')
+                          : (_isEditing ? 'Guardar Cambios' : 'Crear Empleado'),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      elevation: 0,
                     ),
-                    elevation: 0,
                   ),
                 ),
-              ),
 
               // --- Botón Desactivar (solo edición, no es owner) ---
-              if (_isEditing && !widget.existingUser!.isOwner) ...[
+              if (!widget.readOnly &&
+                  _isEditing &&
+                  !widget.existingUser!.isOwner) ...[
                 const SizedBox(height: 16),
                 SizedBox(
                   height: 48,
@@ -483,7 +541,22 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
       );
 
       if (state.error == null) {
-        Navigator.pop(context);
+        if (_isEditing) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Row(
+                children: [
+                  Icon(Icons.check_circle_rounded, color: Colors.white),
+                  SizedBox(width: 8),
+                  Text('Cambios guardados correctamente'),
+                ],
+              ),
+              backgroundColor: AppColors.estadoCosechado,
+            ),
+          );
+        } else {
+          Navigator.pop(context);
+        }
       }
     }
   }

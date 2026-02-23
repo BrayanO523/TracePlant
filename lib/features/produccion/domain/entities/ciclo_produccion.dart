@@ -10,6 +10,7 @@ class CicloProduccion {
   final DateTime fechaSiembra; // Antes fechaApertura
   final double area;
   final String variedad;
+  final bool esCultivoContinuo;
 
   // Lista de encintados (Nuevo)
   final List<DetalleEncintado> encintados;
@@ -35,6 +36,7 @@ class CicloProduccion {
     required this.fechaSiembra,
     required this.area,
     required this.variedad,
+    this.esCultivoContinuo = true, // Por defecto para retrocompatibilidad
     this.encintados = const [],
     this.fechaCosecha,
     this.cantidadCosecha,

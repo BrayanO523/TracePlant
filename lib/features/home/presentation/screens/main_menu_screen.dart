@@ -5,6 +5,7 @@ import '../../../auth/presentation/views/auth_gate.dart';
 import '../../../administracion/presentation/screens/admin_dashboard_screen.dart';
 import '../../../produccion/presentation/views/produccion_dashboard_screen.dart';
 import '../../../produccion/presentation/consultas/views/consultas_screen.dart';
+import '../../../produccion/presentation/views/mapa_finca_screen.dart';
 import '../../../productora/presentation/views/productora_settings_screen.dart';
 import '../../../usuarios/presentation/views/users_screen.dart';
 import '../../../../app/di/providers.dart';
@@ -135,6 +136,7 @@ class MainMenuScreen extends ConsumerWidget {
                 // --- Menu Cards (Scrollable) ---
                 Expanded(
                   child: Container(
+                    width: double.infinity,
                     decoration: const BoxDecoration(
                       color: AppColors.background,
                       borderRadius: BorderRadius.vertical(
@@ -229,6 +231,38 @@ class MainMenuScreen extends ConsumerWidget {
                                         context,
                                         MaterialPageRoute(
                                           builder: (_) => ConsultasScreen(
+                                            productoraId: productoraId,
+                                          ),
+                                        ),
+                                      );
+                                    } else {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            'Error: No se encontró la empresa',
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                  },
+                                ),
+                              // Mapa GIS: visible si tiene permiso de producción
+                              if (perms != null && perms.tieneProduccion)
+                                _MenuCard(
+                                  width: itemWidth,
+                                  icon: Icons.map_rounded,
+                                  label: 'Mapa GIS',
+                                  subtitle: 'Visualización de fincas y lotes',
+                                  color: const Color(0xFF00897B),
+                                  onTap: () {
+                                    if (productoraId != null &&
+                                        productoraId.isNotEmpty) {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => MapaFincaScreen(
                                             productoraId: productoraId,
                                           ),
                                         ),

@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/errors/result.dart';
 import '../../domain/entities/lote.dart';
@@ -97,6 +98,16 @@ class ProduccionRepositoryImpl implements ProduccionRepository {
         productoraId: productoraId,
         uidUsuario: uidUsuario,
       );
+
+      // Sincronizar variedad → documento del lote en Firestore
+      try {
+        await FirebaseFirestore.instance.collection('lotes').doc(idLote).update(
+          {'variedad': variedad, 'variedadNombre': variedad},
+        );
+      } catch (_) {
+        // No bloquear si el update falla (el ciclo ya se creó bien)
+      }
+
       return Success(ciclo);
     } on Failure catch (f) {
       return FailureResult(f);
@@ -138,6 +149,7 @@ class ProduccionRepositoryImpl implements ProduccionRepository {
   @override
   Future<Result<CicloProduccion>> registrarCosecha({
     required String idCiclo,
+    String? idEncintado,
     required double cantidad,
     required String productoraId,
     required String uidUsuario,
@@ -145,6 +157,7 @@ class ProduccionRepositoryImpl implements ProduccionRepository {
     try {
       final ciclo = await _datasource.registrarCosecha(
         idCiclo: idCiclo,
+        idEncintado: idEncintado,
         cantidad: cantidad,
         productoraId: productoraId,
         uidUsuario: uidUsuario,

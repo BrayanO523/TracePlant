@@ -46,6 +46,18 @@ class UsersRepositoryImpl implements UsersRepository {
   }
 
   @override
+  Stream<Result<List<UserModel>>> watchEmployees(String companyId) {
+    return _datasource
+        .watchEmployees(companyId)
+        .map<Result<List<UserModel>>>((users) {
+          return Success(users);
+        })
+        .handleError((e) {
+          return FailureResult(ServerFailure(e.toString()));
+        });
+  }
+
+  @override
   Future<Result<void>> updateEmployee({
     required String uid,
     String? displayName,

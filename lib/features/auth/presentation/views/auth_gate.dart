@@ -20,6 +20,24 @@ class AuthGate extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Escuchar pérdida de sesión para expulsar de vistas anidadas
+    ref.listen(authStateStreamProvider, (previous, next) {
+      if (next.hasValue && next.value == null) {
+        if (Navigator.of(context).canPop()) {
+          Navigator.of(context).popUntil((route) => route.isFirst);
+        }
+      }
+    });
+
+    // Escuchar desactivación de cuenta en tiempo real
+    ref.listen(currentUserStreamProvider, (previous, next) {
+      if (next.hasValue && next.value != null && !next.value!.isActive) {
+        if (Navigator.of(context).canPop()) {
+          Navigator.of(context).popUntil((route) => route.isFirst);
+        }
+      }
+    });
+
     // 1. Verificar si hay sesión de Firebase Auth
     final authState = ref.watch(authStateStreamProvider);
 

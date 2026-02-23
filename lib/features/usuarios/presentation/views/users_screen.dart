@@ -50,6 +50,12 @@ class UsersScreen extends ConsumerWidget {
       }
     });
 
+    final currentUser = ref.watch(currentUserStreamProvider).value;
+    final myPerms = currentUser?.effectivePermissions;
+    final canCrear = myPerms?.usuarios.crear ?? false;
+    final canEditar = myPerms?.usuarios.editar ?? false;
+    final canVer = myPerms?.usuarios.ver ?? false;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -62,23 +68,25 @@ class UsersScreen extends ConsumerWidget {
         foregroundColor: AppColors.textPrimary,
         elevation: 0,
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => UserFormScreen(
-                companyId: companyId,
-                companyRole: companyRole,
-              ),
-            ),
-          );
-        },
-        icon: const Icon(Icons.person_add_rounded),
-        label: const Text('Nuevo'),
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-      ),
+      floatingActionButton: canCrear
+          ? FloatingActionButton.extended(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => UserFormScreen(
+                      companyId: companyId,
+                      companyRole: companyRole,
+                    ),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.person_add_rounded),
+              label: const Text('Nuevo'),
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+            )
+          : null,
       body: state.isLoading
           ? const Center(
               child: CircularProgressIndicator(color: AppColors.primary),
@@ -102,10 +110,11 @@ class UsersScreen extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
-                    'Toca "Nuevo" para agregar un empleado.',
-                    style: TextStyle(fontSize: 13, color: AppColors.textHint),
-                  ),
+                  if (canCrear)
+                    const Text(
+                      'Toca "Nuevo" para agregar un empleado.',
+                      style: TextStyle(fontSize: 13, color: AppColors.textHint),
+                    ),
                 ],
               ),
             )
@@ -144,6 +153,7 @@ class UsersScreen extends ConsumerWidget {
                     ),
                     child: ListTile(
                       onTap: () {
+                        if (!canVer && !canEditar) return;
                         Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -151,6 +161,7 @@ class UsersScreen extends ConsumerWidget {
                               companyId: companyId,
                               companyRole: companyRole,
                               existingUser: user,
+                              readOnly: !canEditar,
                             ),
                           ),
                         );

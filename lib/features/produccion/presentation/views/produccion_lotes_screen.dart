@@ -33,6 +33,8 @@ class _ProduccionLotesScreenState extends ConsumerState<ProduccionLotesScreen> {
   @override
   Widget build(BuildContext context) {
     final lotesState = ref.watch(lotesNotifierProvider(widget.productoraId));
+    final currentUser = ref.watch(currentUserStreamProvider).value;
+    final perms = currentUser?.effectivePermissions;
 
     // Filtrar lotes por Finca y luego por Estado (Chip)
     final lotesDeFinca = lotesState.lotes.where((l) {
@@ -151,8 +153,27 @@ class _ProduccionLotesScreenState extends ConsumerState<ProduccionLotesScreen> {
                   return LoteCard(
                     lote: lote,
                     onTap: () {
-                      if (widget.readOnly) {
-                        // Modo Lectura
+                      final siguiente = ref
+                          .read(produccionNotifierProvider(widget.productoraId))
+                          .siguientePaso(lote.id);
+
+                      bool tienePermiso = false;
+                      if (perms != null) {
+                        switch (siguiente) {
+                          case TipoEvento.siembra:
+                            tienePermiso = perms.siembra.crear;
+                          case TipoEvento.encintado:
+                            tienePermiso = perms.encintado.crear;
+                          case TipoEvento.cosecha:
+                            tienePermiso = perms.cosecha.crear;
+                          case TipoEvento.entrega:
+                          default:
+                            tienePermiso = false;
+                        }
+                      }
+
+                      if (widget.readOnly || !tienePermiso) {
+                        // Modo Lectura -> LoteHistoryScreen
 
                         Navigator.push(
                           context,
@@ -170,13 +191,6 @@ class _ProduccionLotesScreenState extends ConsumerState<ProduccionLotesScreen> {
                           context,
                           MaterialPageRoute(
                             builder: (_) {
-                              final siguiente = ref
-                                  .read(
-                                    produccionNotifierProvider(
-                                      widget.productoraId,
-                                    ),
-                                  )
-                                  .siguientePaso(lote.id);
                               return CicloFormScreen(
                                 productoraId: widget.productoraId,
                                 idLote: lote.id,
