@@ -5,6 +5,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../viewmodels/asignaciones_notifier.dart';
 import '../widgets/productora_stats_card.dart';
 import '../widgets/relaciones_map.dart';
+import '../../../../core/utils/formatters.dart';
 
 /// Panel de Administración — Dashboard de Asignación de Suministros.
 ///
@@ -172,7 +173,7 @@ class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen>
             child: _KpiButton(
               icon: Icons.business_rounded,
               label: 'Empacadoras',
-              value: '${state.empacadoras.length}',
+              value: AppFormatters.formatInt(state.empacadoras.length),
               color: Colors.blue,
               isActive: _activeView == 0,
               badge: _selectedEmpacadoraId != null ? '✓' : null,
@@ -188,7 +189,9 @@ class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen>
             child: _KpiButton(
               icon: Icons.agriculture_rounded,
               label: 'Disponibles',
-              value: '${state.productorasDisponibles.length}',
+              value: AppFormatters.formatInt(
+                state.productorasDisponibles.length,
+              ),
               color: AppColors.estadoCosechado,
               isActive: _activeView == 1,
               badge: _selectedProductoraIds.isNotEmpty
@@ -217,7 +220,7 @@ class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen>
             child: _KpiButton(
               icon: Icons.link_rounded,
               label: 'Asignaciones',
-              value: '${state.totalAsignaciones}',
+              value: AppFormatters.formatInt(state.totalAsignaciones),
               color: Colors.deepPurple,
               isActive: false,
               onTap: () {

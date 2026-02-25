@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../productora/domain/entities/productora.dart';
 import '../../../produccion/presentation/viewmodels/productora_stats_notifier.dart';
+import '../../../../core/utils/formatters.dart';
 
 class ProductoraStatsCard extends ConsumerStatefulWidget {
   final Productora productora;
@@ -190,28 +191,30 @@ class _ProductoraStatsCardState extends ConsumerState<ProductoraStatsCard> {
                   _buildStatItem(
                     theme,
                     label: 'Ciclos Activos',
-                    value: stats.ciclosActivos.toString(),
+                    value: AppFormatters.formatInt(stats.ciclosActivos),
                     icon: Icons.loop_rounded,
                     color: Colors.blue,
                   ),
                   _buildStatItem(
                     theme,
                     label: 'Lotes',
-                    value: stats.lotesActivos.toString(),
+                    value: AppFormatters.formatInt(stats.lotesActivos),
                     icon: Icons.grass_rounded,
                     color: Colors.teal,
                   ),
                   _buildStatItem(
                     theme,
                     label: 'Vol. Cosecha',
-                    value: '${stats.volumenCosecha.toStringAsFixed(0)} lbs',
+                    value:
+                        '${AppFormatters.formatInt(stats.volumenCosecha)} lbs',
                     icon: Icons.scale_rounded,
                     color: Colors.green,
                   ),
                   _buildStatItem(
                     theme,
                     label: 'En Cinta',
-                    value: '${stats.volumenEncintado.toStringAsFixed(0)} lbs',
+                    value:
+                        '${AppFormatters.formatInt(stats.volumenEncintado)} lbs',
                     icon: Icons.inventory_2_outlined,
                     color: Colors.orange,
                   ),

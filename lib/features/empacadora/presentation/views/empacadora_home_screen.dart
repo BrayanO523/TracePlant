@@ -5,6 +5,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../produccion/presentation/views/produccion_dashboard_screen.dart';
 import '../../../produccion/presentation/views/ciclo_history_screen.dart';
 import '../viewmodels/empacadora_dashboard_notifier.dart';
+import '../../../../core/utils/formatters.dart';
 
 class EmpacadoraHomeScreen extends ConsumerStatefulWidget {
   const EmpacadoraHomeScreen({super.key});
@@ -187,7 +188,9 @@ class _ResumenTab extends StatelessWidget {
             Expanded(
               child: _KpiCard(
                 title: 'Productoras',
-                value: '${state.productorasAsignadas.length}',
+                value: AppFormatters.formatInt(
+                  state.productorasAsignadas.length,
+                ),
                 icon: Icons.store_mall_directory_rounded,
                 color: AppColors.info,
               ),
@@ -196,7 +199,7 @@ class _ResumenTab extends StatelessWidget {
             Expanded(
               child: _KpiCard(
                 title: 'Ciclos Activos',
-                value: '${state.totalCiclosActivos}',
+                value: AppFormatters.formatInt(state.totalCiclosActivos),
                 icon: Icons.loop_rounded,
                 color: AppColors.primary,
               ),
@@ -206,7 +209,7 @@ class _ResumenTab extends StatelessWidget {
         const SizedBox(height: 10),
         _KpiCard(
           title: 'Total Encintado',
-          value: state.totalKilosProyectados.toStringAsFixed(0),
+          value: AppFormatters.formatInt(state.totalKilosProyectados),
           icon: Icons.inventory_2_rounded,
           color: AppColors.estadoEncintado,
           suffix: 'un',
@@ -467,7 +470,7 @@ class _CintaCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
-                    '${proyeccion.cantidad.toStringAsFixed(0)} un',
+                    '${AppFormatters.formatInt(proyeccion.cantidad)} un',
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w800,
