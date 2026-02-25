@@ -6,7 +6,8 @@ import '../../../../administracion/domain/entities/finca.dart';
 import '../../../domain/entities/lote.dart';
 import '../../widgets/cohorte_card.dart'; // Import nuevo
 import '../../views/selectors/selector_filter_modal.dart';
-import '../viewmodels/consultas_notifier.dart'; // Import recuperado
+import '../viewmodels/consultas_notifier.dart';
+import '../../../../../core/utils/formatters.dart'; // Import recuperado
 
 class ProyeccionCosechaScreen extends ConsumerWidget {
   final String productoraId;
@@ -126,7 +127,7 @@ class ProyeccionCosechaScreen extends ConsumerWidget {
                         ),
                       ),
                       Text(
-                        '${cohortes.length} grupos programados · ${state.semanasParaCosecha} sem config.',
+                        '${AppFormatters.formatInt(cohortes.length)} grupos programados · ${state.semanasParaCosecha} sem config.',
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.grey.shade500,

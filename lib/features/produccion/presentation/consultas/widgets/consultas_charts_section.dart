@@ -1,6 +1,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import '../../../../../../app/theme/app_colors.dart';
+import '../../../../../../core/utils/formatters.dart';
 
 class ConsultasChartsSection extends StatelessWidget {
   final Map<String, double> statsPorColor;
@@ -237,7 +238,7 @@ class _ColorDistributionChart extends StatelessWidget {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        '${value.toStringAsFixed(0)} un',
+                        '${AppFormatters.formatInt(value)} un',
                         style: const TextStyle(
                           fontSize: 12,
                           color: AppColors.textSecondary,

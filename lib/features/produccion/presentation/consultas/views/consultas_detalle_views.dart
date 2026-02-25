@@ -7,6 +7,7 @@ import '../widgets/consultas_filter_modal.dart';
 import '../../../../administracion/domain/entities/finca.dart';
 import '../../../domain/entities/lote.dart'; // Lote de Produccion
 import '../../views/lote_history_screen.dart';
+import '../../../../../core/utils/formatters.dart';
 
 // ─── CONSULTA POR VARIEDAD ───────────────────────────────────────────────────
 class ConsultaVariedadView extends ConsumerWidget {
@@ -47,7 +48,7 @@ class ConsultaVariedadView extends ConsumerWidget {
                 ),
                 _StatItem(
                   label: 'Encintado Total',
-                  value: state.totalEncintado.toStringAsFixed(0),
+                  value: AppFormatters.formatInt(state.totalEncintado),
                 ),
               ],
             ),
@@ -155,7 +156,7 @@ class ConsultaCintaView extends ConsumerWidget {
                 ),
                 _StatItem(
                   label: 'Encintado Total',
-                  value: state.totalEncintado.toStringAsFixed(0),
+                  value: AppFormatters.formatInt(state.totalEncintado),
                 ),
               ],
             ),
@@ -293,7 +294,7 @@ class ConsultaFincaView extends ConsumerWidget {
                 ),
                 _StatItem(
                   label: 'Encintado Total',
-                  value: state.totalEncintado.toStringAsFixed(0),
+                  value: AppFormatters.formatInt(state.totalEncintado),
                 ),
               ],
             ),
@@ -406,7 +407,7 @@ class ConsultaLotesFincaView extends ConsumerWidget {
                 ),
                 _StatItem(
                   label: 'Encintado',
-                  value: encintadoFinca.toStringAsFixed(0),
+                  value: AppFormatters.formatInt(encintadoFinca),
                 ),
               ],
             ),
@@ -552,11 +553,11 @@ class _ResultadosConsultaViewState
                 ),
                 _StatItem(
                   label: 'Encintado',
-                  value: state.totalEncintado.toStringAsFixed(0),
+                  value: AppFormatters.formatInt(state.totalEncintado),
                 ),
                 _StatItem(
                   label: 'Cosechado',
-                  value: state.totalCosechado.toStringAsFixed(0),
+                  value: AppFormatters.formatInt(state.totalCosechado),
                 ),
               ],
             ),

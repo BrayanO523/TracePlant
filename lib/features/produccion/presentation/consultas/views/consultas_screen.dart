@@ -9,10 +9,15 @@ import '../viewmodels/consultas_notifier.dart';
 import '../widgets/export_button.dart';
 import '../logic/pdf_report_generator.dart';
 import '../../../../../features/administracion/domain/entities/cinta.dart';
+import '../../../../../core/utils/formatters.dart';
+
+import '../../views/tareas/accion_produccion_screen.dart';
+import '../../../domain/entities/tipo_accion_produccion.dart';
 
 import 'cosechas_pendientes_screen.dart';
 import 'proyeccion_cosecha_screen.dart';
 import 'consultas_detalle_views.dart';
+import 'consultas_ciclos_activos_screen.dart';
 
 class ConsultasScreen extends ConsumerStatefulWidget {
   final String productoraId;
@@ -230,6 +235,13 @@ class _ConsultasScreenState extends ConsumerState<ConsultasScreen> {
       );
     }
 
+    final permissions = ref
+        .watch(currentUserStreamProvider)
+        .value
+        ?.effectivePermissions;
+    final canCreateEncintado = permissions?.encintado.crear ?? false;
+    final canCreateCosecha = permissions?.cosecha.crear ?? false;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -251,37 +263,77 @@ class _ConsultasScreenState extends ConsumerState<ConsultasScreen> {
               children: [
                 _GlobalStatCard(
                   title: 'Ciclos Activos',
-                  value: state.totalCiclos.toString(),
+                  value: AppFormatters.formatInt(state.totalCiclos),
                   icon: Icons.loop_rounded,
                   color: AppColors.info,
                   width: cardWidth,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ConsultasCiclosActivosScreen(
+                          productoraId: widget.productoraId,
+                        ),
+                      ),
+                    );
+                  },
                 ),
                 _GlobalStatCard(
                   title: 'Total Encintado',
-                  value: state.totalEncintado.toStringAsFixed(0),
+                  value: AppFormatters.formatInt(state.totalEncintado),
                   icon: Icons.loyalty_rounded,
                   color: AppColors.warning,
                   width: cardWidth,
-                ),
-                _GlobalStatCard(
-                  title: 'A Cosechar',
-                  value: state.totalCosechasPendientes.toStringAsFixed(0),
-                  icon: Icons.inventory_2_rounded,
-                  color: Colors.orange,
-                  width: cardWidth,
+                  onTap: canCreateEncintado
+                      ? () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => AccionProduccionScreen(
+                                productoraId: widget.productoraId,
+                                accion: TipoAccionProduccion.encintado,
+                              ),
+                            ),
+                          );
+                        }
+                      : () => _mostrarErrorPermiso(context, 'Encintados'),
                 ),
                 _GlobalStatCard(
                   title: 'Total Cosechado',
-                  value: state.totalCosechado.toStringAsFixed(0),
+                  value: AppFormatters.formatInt(state.totalCosechado),
                   icon: Icons.content_cut_rounded,
                   color: AppColors.error,
                   width: cardWidth,
+                  onTap: canCreateCosecha
+                      ? () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => AccionProduccionScreen(
+                                productoraId: widget.productoraId,
+                                accion: TipoAccionProduccion.cosecha,
+                              ),
+                            ),
+                          );
+                        }
+                      : () => _mostrarErrorPermiso(context, 'Cosechas'),
                 ),
               ],
             );
           },
         ),
       ],
+    );
+  }
+
+  void _mostrarErrorPermiso(BuildContext context, String modulo) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'No tienes permisos de creación para el módulo de $modulo.',
+        ),
+        backgroundColor: AppColors.error,
+      ),
     );
   }
 } // <- End of _ConsultasScreenState
@@ -292,6 +344,7 @@ class _GlobalStatCard extends StatelessWidget {
   final IconData icon;
   final Color color;
   final double width;
+  final VoidCallback? onTap;
 
   const _GlobalStatCard({
     required this.title,
@@ -299,55 +352,63 @@ class _GlobalStatCard extends StatelessWidget {
     required this.icon,
     required this.color,
     required this.width,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: width,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: 0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
+        child: Ink(
+          width: width,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.grey.shade200),
+            boxShadow: [
+              BoxShadow(
+                color: color.withValues(alpha: 0.1),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: color, size: 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: color, size: 24),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: AppColors.textSecondary,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 12),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 13,
-              color: AppColors.textSecondary,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

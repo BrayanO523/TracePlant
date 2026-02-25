@@ -5,6 +5,7 @@ import '../../../../../app/theme/app_colors.dart';
 import '../../../domain/entities/ciclo_produccion.dart';
 import '../../widgets/ciclo_timeline.dart';
 import '../viewmodels/consultas_notifier.dart';
+import '../../../../../core/utils/formatters.dart';
 
 class CosechasPendientesScreen extends ConsumerWidget {
   final String productoraId;
@@ -97,7 +98,7 @@ class CosechasPendientesScreen extends ConsumerWidget {
                         ),
                       ),
                       Text(
-                        '$totalPendientes lotes \u00b7 ${totalUnidades.toStringAsFixed(0)} unidades',
+                        '$totalPendientes lotes \u00b7 ${AppFormatters.formatInt(totalUnidades)} unidades',
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.grey.shade500,
@@ -242,7 +243,7 @@ class CosechaPendienteCard extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        cicloModel.cantidadCosecha?.toStringAsFixed(0) ?? "0",
+                        AppFormatters.formatInt(cicloModel.cantidadCosecha),
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,

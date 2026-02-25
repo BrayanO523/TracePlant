@@ -6,6 +6,8 @@ import 'package:productoraempacadora/features/produccion/domain/entities/ciclo_p
 import '../../../../../features/administracion/domain/entities/cinta.dart';
 import '../viewmodels/consultas_notifier.dart';
 
+import 'package:productoraempacadora/core/utils/formatters.dart';
+
 class PdfReportGenerator {
   static Future<void> generateAndPrint(
     ConsultasState state,
@@ -92,14 +94,17 @@ class PdfReportGenerator {
       child: pw.Row(
         mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
         children: [
-          _buildSummaryItem('Total Ciclos', '${state.totalCiclos}'),
+          _buildSummaryItem(
+            'Total Ciclos',
+            AppFormatters.formatInt(state.totalCiclos),
+          ),
           _buildSummaryItem(
             'Encintados',
-            state.totalEncintado.toStringAsFixed(0),
+            AppFormatters.formatInt(state.totalEncintado),
           ),
           _buildSummaryItem(
             'Cosechado',
-            '${state.totalCosechado.toStringAsFixed(1)} Uds',
+            '${AppFormatters.formatNumber(state.totalCosechado)} Uds',
           ), // Asumiendo unidad
         ],
       ),
@@ -123,7 +128,7 @@ class PdfReportGenerator {
 
   static pw.Widget _buildColorTable(Map<String, double> stats) {
     final rows = stats.entries.map((e) {
-      return [e.key, e.value.toStringAsFixed(0)];
+      return [e.key, AppFormatters.formatInt(e.value)];
     }).toList();
 
     return pw.TableHelper.fromTextArray(
@@ -145,8 +150,8 @@ class PdfReportGenerator {
         c.nombreLote,
         c.variedad,
         dateFormat.format(c.fechaSiembra),
-        c.totalEncintado.toStringAsFixed(0),
-        cosecha.toStringAsFixed(1),
+        AppFormatters.formatInt(c.totalEncintado),
+        AppFormatters.formatNumber(cosecha),
         c.estado.name, // Enum name
       ];
     }).toList();
