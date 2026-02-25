@@ -5,6 +5,7 @@ import '../../../domain/entities/tipo_accion_produccion.dart';
 import '../../viewmodels/accion_lotes_provider.dart';
 import '../../../domain/entities/produccion_enums.dart';
 import '../ciclo_form_screen.dart'; // importando ciclo_form_screen
+import '../../../../../core/utils/formatters.dart';
 
 class AccionProduccionScreen extends ConsumerStatefulWidget {
   final String productoraId;
@@ -157,7 +158,7 @@ class _AccionProduccionScreenState
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Text(
-                          fa.count.toString(),
+                          AppFormatters.formatInt(fa.count),
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,

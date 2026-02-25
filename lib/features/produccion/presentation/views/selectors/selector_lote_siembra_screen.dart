@@ -9,6 +9,7 @@ import '../../../domain/entities/lote.dart';
 import '../../../domain/entities/produccion_enums.dart';
 import '../ciclo_form_screen.dart';
 import 'selector_filter_modal.dart';
+import '../../../../../../core/utils/formatters.dart';
 
 // --- PROVEEDORES DE ESTADO LOCAL (BÚSQUEDA Y FILTROS) ---
 final slsSearchQueryProvider = StateProvider.autoDispose<String>((ref) => '');
@@ -264,7 +265,7 @@ class _SelectorLoteSiembraScreenState
                 child: Row(
                   children: [
                     Text(
-                      '${loteIds.length} lotes disponibles',
+                      '${AppFormatters.formatInt(loteIds.length)} lotes disponibles',
                       style: TextStyle(
                         color: Colors.grey.shade600,
                         fontWeight: FontWeight.bold,
@@ -379,7 +380,7 @@ class _LoteCard extends ConsumerWidget {
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         subtitle: Text(
-          '$fincaNombre • ${loteModel.area} mz • ${loteModel.variedad}',
+          '$fincaNombre • ${AppFormatters.formatNumber(loteModel.area)} mz • ${loteModel.variedad}',
         ),
         trailing: const Icon(Icons.chevron_right_rounded),
       ),

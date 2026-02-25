@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../domain/logic/encintado_cohortes_logic.dart'; // Importar los modelos
+import '../../../../core/utils/formatters.dart';
 
 class CohorteCard extends StatelessWidget {
   final CohorteResumen cohorte;
@@ -168,10 +169,9 @@ class CohorteCard extends StatelessWidget {
                               size: 16,
                               color: Colors.green,
                             ),
-                            const SizedBox(width: 6),
                             Flexible(
                               child: Text(
-                                '${cohorte.cantidadTotal} Racimos',
+                                '${AppFormatters.formatInt(cohorte.cantidadTotal)} Racimos',
                                 style: const TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.bold,

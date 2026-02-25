@@ -6,6 +6,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../core/errors/result.dart';
 import '../../domain/entities/ciclo_produccion.dart';
 import 'ciclo_history_screen.dart';
+import '../../../../core/utils/formatters.dart';
 
 class LoteHistoryScreen extends ConsumerStatefulWidget {
   final String productoraId;
@@ -339,7 +340,7 @@ class _HistoryCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        '${ciclo.cantidadCosecha?.toStringAsFixed(1)} Uds',
+                        '${AppFormatters.formatNumber(ciclo.cantidadCosecha)} Uds',
                         style: const TextStyle(
                           fontWeight: FontWeight.w600,
                           fontSize: 14,

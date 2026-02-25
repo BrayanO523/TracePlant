@@ -8,6 +8,7 @@ import '../consultas/views/cosechas_pendientes_screen.dart';
 import '../consultas/views/proyeccion_cosecha_screen.dart';
 import '../../domain/entities/tipo_accion_produccion.dart';
 import 'tareas/accion_produccion_screen.dart';
+import '../../../../core/utils/formatters.dart';
 
 class ProduccionDashboardScreen extends ConsumerStatefulWidget {
   final String productoraId;
@@ -66,14 +67,15 @@ class _ProduccionDashboardScreenState
 
   @override
   Widget build(BuildContext context) {
-    final canViewConsultas =
-        ref
-            .watch(currentUserStreamProvider)
-            .value
-            ?.effectivePermissions
-            .consultas
-            .ver ??
-        false;
+    final permissions = ref
+        .watch(currentUserStreamProvider)
+        .value
+        ?.effectivePermissions;
+    final canViewConsultas = permissions?.consultas.ver ?? false;
+    final canCreateSiembra = permissions?.siembra.crear ?? false;
+    final canCreateEncintado = permissions?.encintado.crear ?? false;
+    final canCreateCosecha = permissions?.cosecha.crear ?? false;
+    final canViewFincas = permissions?.fincas.ver ?? false;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -122,65 +124,72 @@ class _ProduccionDashboardScreenState
                 children: [
                   Row(
                     children: [
-                      Expanded(
-                        child: _buildTaskBtn(
-                          context,
-                          'Siembra',
-                          Icons.grass_rounded,
-                          AppColors.success,
-                          TipoAccionProduccion.siembra,
+                      if (canCreateSiembra)
+                        Expanded(
+                          child: _buildTaskBtn(
+                            context,
+                            'Siembra',
+                            Icons.grass_rounded,
+                            AppColors.success,
+                            TipoAccionProduccion.siembra,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildTaskBtn(
-                          context,
-                          'Encintado',
-                          Icons.loyalty_rounded,
-                          AppColors.warning,
-                          TipoAccionProduccion.encintado,
+                      if (canCreateSiembra &&
+                          (canCreateEncintado || canCreateCosecha))
+                        const SizedBox(width: 12),
+                      if (canCreateEncintado)
+                        Expanded(
+                          child: _buildTaskBtn(
+                            context,
+                            'Encintado',
+                            Icons.loyalty_rounded,
+                            AppColors.warning,
+                            TipoAccionProduccion.encintado,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildTaskBtn(
-                          context,
-                          'Cosecha',
-                          Icons.content_cut_rounded,
-                          AppColors.error,
-                          TipoAccionProduccion.cosecha,
+                      if (canCreateEncintado && canCreateCosecha)
+                        const SizedBox(width: 12),
+                      if (canCreateCosecha)
+                        Expanded(
+                          child: _buildTaskBtn(
+                            context,
+                            'Cosecha',
+                            Icons.content_cut_rounded,
+                            AppColors.error,
+                            TipoAccionProduccion.cosecha,
+                          ),
                         ),
-                      ),
                     ],
                   ),
-                  const SizedBox(height: 16),
-
-                  // Botón Administrativo Segundario
-                  SizedBox(
-                    width: double.infinity,
-                    child: TextButton.icon(
-                      style: TextButton.styleFrom(
-                        foregroundColor: Colors.grey.shade700,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => ProduccionFincasScreen(
-                              productoraId: widget.productoraId,
-                              readOnly: widget.readOnly,
+                  if (canViewFincas) ...[
+                    const SizedBox(height: 16),
+                    // Botón Administrativo Segundario
+                    SizedBox(
+                      width: double.infinity,
+                      child: TextButton.icon(
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.grey.shade700,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ProduccionFincasScreen(
+                                productoraId: widget.productoraId,
+                                readOnly: widget.readOnly,
+                              ),
                             ),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.map_rounded),
-                      label: const Text(
-                        'Explorador GIS de Fincas y Lotes Totales',
-                        style: TextStyle(fontWeight: FontWeight.w600),
+                          );
+                        },
+                        icon: const Icon(Icons.map_rounded),
+                        label: const Text(
+                          'Explorador GIS de Fincas y Lotes Totales',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
                       ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),
@@ -273,7 +282,7 @@ class _StatsGrid extends StatelessWidget {
               icon: Icons.loop_rounded,
               color: AppColors.info,
               label: 'Ciclos Activos',
-              value: stats['ciclosActivos'].toString(),
+              value: AppFormatters.formatInt(stats['ciclosActivos']),
               onTap: canViewConsultas
                   ? () => Navigator.push(
                       context,
@@ -290,7 +299,7 @@ class _StatsGrid extends StatelessWidget {
               icon: Icons.grid_on_rounded,
               color: AppColors.secondary,
               label: 'Lotes Activos',
-              value: stats['lotesActivos'].toString(),
+              value: AppFormatters.formatInt(stats['lotesActivos']),
               onTap: canViewConsultas
                   ? () => Navigator.push(
                       context,
@@ -307,7 +316,8 @@ class _StatsGrid extends StatelessWidget {
               icon: Icons.agriculture_rounded,
               color: AppColors.primary,
               label: 'Cosecha Total',
-              value: '${stats['volumenCosecha'].toStringAsFixed(1)} un',
+              value:
+                  '${AppFormatters.formatNumber(stats['volumenCosecha'])} un',
               onTap: canViewConsultas
                   ? () => Navigator.push(
                       context,
@@ -324,7 +334,8 @@ class _StatsGrid extends StatelessWidget {
               icon: Icons.bookmark_rounded,
               color: AppColors.accent,
               label: 'En Cinta',
-              value: '${stats['volumenEncintado'].toStringAsFixed(1)} un',
+              value:
+                  '${AppFormatters.formatNumber(stats['volumenEncintado'])} un',
               onTap: canViewConsultas
                   ? () => Navigator.push(
                       context,

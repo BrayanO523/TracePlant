@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../domain/entities/lote.dart';
 import '../../domain/entities/produccion_enums.dart';
+import '../../../../core/utils/formatters.dart';
 
 /// Card de lote rediseñada para LISTA (Compacta/Horizontal).
 /// Maximiza el espacio y muestra la información clave en una fila.
@@ -64,7 +65,7 @@ class LoteCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${lote.area.toStringAsFixed(1)} mz • ${lote.variedad}',
+                      '${AppFormatters.formatNumber(lote.area)} mz • ${lote.variedad}',
                       style: const TextStyle(
                         fontSize: 13,
                         color: AppColors.textSecondary,

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../viewmodels/production_fincas_notifier.dart';
 import 'produccion_lotes_screen.dart';
+import '../../../../core/utils/formatters.dart';
 
 class ProduccionFincasScreen extends ConsumerWidget {
   final String productoraId;
@@ -128,7 +129,7 @@ class ProduccionFincasScreen extends ConsumerWidget {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  '${finca.ubicacion} • ${finca.areaTotal.toStringAsFixed(2)} mz',
+                                  '${finca.ubicacion} • ${AppFormatters.formatNumber(finca.areaTotal)} mz',
                                   style: const TextStyle(
                                     fontSize: 13,
                                     color: AppColors.textSecondary,

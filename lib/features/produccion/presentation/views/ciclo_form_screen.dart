@@ -10,6 +10,7 @@ import 'package:intl/intl.dart';
 import '../../../administracion/domain/entities/cinta.dart';
 import '../widgets/ciclo_timeline.dart';
 import '../../../administracion/presentation/screens/cintas_screen.dart';
+import '../../../../core/utils/formatters.dart';
 
 /// Formulario premium para registrar eventos del ciclo (Siembra, Encintado, Cosecha).
 /// Re-diseñado con estilo "Card-based" profesional.
@@ -287,7 +288,7 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
                 if (ciclo != null) ...[
                   const SizedBox(height: 4),
                   Text(
-                    '${ciclo.variedad} • ${ciclo.area.toStringAsFixed(1)} mz',
+                    '${ciclo.variedad} • ${AppFormatters.formatNumber(ciclo.area)} mz',
                     style: TextStyle(
                       color: Colors.white.withValues(alpha: 0.9),
                       fontSize: 13,
@@ -825,7 +826,7 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
           );
         },
         icon: const Icon(Icons.agriculture_rounded),
-        label: const Text('Finalizar Ciclo / Cosechar'),
+        label: const Text('Cosechar'),
         style: FilledButton.styleFrom(
           backgroundColor: AppColors.estadoCosechado,
           shape: RoundedRectangleBorder(
@@ -900,7 +901,7 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        '${e.cintaNombre} - Disp: ${e.disponible.toStringAsFixed(0)}',
+                        '${e.cintaNombre} - Disp: ${AppFormatters.formatInt(e.disponible)}',
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -965,7 +966,7 @@ class _CicloFormScreenState extends ConsumerState<CicloFormScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  'Total Encintado: ${totalEncintado.toStringAsFixed(2)} uds\nRegistre lo que realmente se cosechó.',
+                  'Total Encintado: ${AppFormatters.formatNumber(totalEncintado)} uds\nRegistre lo que realmente se cosechó.',
                   style: const TextStyle(color: AppColors.textPrimary),
                 ),
               ),

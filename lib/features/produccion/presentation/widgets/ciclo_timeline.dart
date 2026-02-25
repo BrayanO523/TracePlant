@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../domain/entities/ciclo_produccion.dart';
 import '../../domain/entities/produccion_enums.dart';
+import '../../../../core/utils/formatters.dart';
 
 Color _parseColor(String hex) {
   final buffer = StringBuffer();
@@ -40,7 +41,8 @@ class CicloTimeline extends StatelessWidget {
         icon: Icons.grass_rounded,
         color: AppColors.estadoSembrado, // Amber
         title: 'Siembra',
-        subtitle: '${ciclo.area.toStringAsFixed(1)} mz · ${ciclo.variedad}',
+        subtitle:
+            '${AppFormatters.formatNumber(ciclo.area)} mz · ${ciclo.variedad}',
         date: ciclo.fechaSiembra,
         isCompleted: true,
         ageText: 'Día 0',
@@ -63,7 +65,7 @@ class CicloTimeline extends StatelessWidget {
             color: _parseColor(encintado.cintaColorHex),
             title: 'Encintado ${i + 1}',
             subtitle:
-                '${encintado.cintaNombre} · ${encintado.cantidad.toStringAsFixed(2)} uds',
+                '${encintado.cintaNombre} · ${AppFormatters.formatInt(encintado.cantidad)} uds',
             date: encintado.fecha,
             isCompleted: true,
             cintaColorHex: encintado.cintaColorHex,
@@ -112,7 +114,7 @@ class CicloTimeline extends StatelessWidget {
           color: AppColors.estadoCosechado, // Green
           title: 'Cosecha',
           subtitle: isCosechado && ciclo.cantidadCosecha != null
-              ? '${ciclo.cantidadCosecha!.toStringAsFixed(0)} uds · Merma: ${ciclo.merma?.toStringAsFixed(1) ?? "—"}'
+              ? '${AppFormatters.formatNumber(ciclo.cantidadCosecha)} uds · Merma: ${ciclo.merma != null ? AppFormatters.formatNumber(ciclo.merma) : "—"}'
               : 'Pendiente',
           date: ciclo.fechaCosecha,
           isCompleted: isCosechado,
@@ -170,7 +172,7 @@ class CicloTimeline extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        '${ciclo.variedad} · ${ciclo.area.toStringAsFixed(1)} mz',
+                        '${ciclo.variedad} · ${AppFormatters.formatNumber(ciclo.area)} mz',
                         style: theme.textTheme.labelSmall?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
                         ),

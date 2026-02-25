@@ -9,6 +9,7 @@ import '../../../administracion/presentation/providers/administracion_provider.d
 import '../../domain/entities/ciclo_produccion.dart';
 import '../../domain/entities/produccion_enums.dart';
 import '../consultas/viewmodels/consultas_notifier.dart';
+import '../../../../../core/utils/formatters.dart';
 
 /// Mapa Termográfico GIS.
 /// Pinta los lotes con polígonos de colores según su estado de producción.
@@ -385,7 +386,7 @@ class MapaFincaScreen extends ConsumerWidget {
                   _InfoChip(
                     icon: Icons.straighten_rounded,
                     label: 'Área',
-                    value: '${lote.area} m²',
+                    value: '${AppFormatters.formatNumber(lote.area)} m²',
                   ),
                   const SizedBox(width: 12),
                   _InfoChip(
@@ -412,7 +413,7 @@ class MapaFincaScreen extends ConsumerWidget {
                       _InfoChip(
                         icon: Icons.confirmation_number_rounded,
                         label: 'Encintados',
-                        value: '${ciclo.encintados.length}',
+                        value: AppFormatters.formatInt(ciclo.encintados.length),
                       ),
                   ],
                 ),
